@@ -11,6 +11,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(8080),
 
   CORS_ORIGIN: z.url().default("http://localhost:8080"),
+
+  MONGODB_URL: z.string({ error: "MongoDB URL connection string" }),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

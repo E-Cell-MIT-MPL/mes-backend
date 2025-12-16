@@ -4,7 +4,7 @@ import { HttpException } from "../lib/httpException.js";
 
 /**
  * Validate request body
- * @param schema {import("zod").ZodAny}
+ * @param schema {import("zod").ZodType}
  * @returns {import("express").RequestHandler}
  */
 export const validateRequest = (schema) => async (req, res, next) => {
