@@ -4,6 +4,7 @@ import { pino } from "pino";
 
 import { healthCheckRouter } from "./route/healthCheck.route.js";
 import httpLogger from "./middleware/requestLogger.js";
+import errorHandler from "./middleware/errorHandler.js";
 
 export const serverLogger = pino({ name: "server" });
 export const app = express();
@@ -18,3 +19,6 @@ app.use(httpLogger);
 
 // Routes
 app.use("/health-check", healthCheckRouter);
+
+// Error handlers
+app.use(errorHandler());

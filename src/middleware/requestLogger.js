@@ -1,6 +1,6 @@
 import pinoHttp from "pino-http";
 
-import { env } from "../utils/envConfig";
+import { env } from "../utils/envConfig.js";
 
 const httpLogger = pinoHttp({
   name: "http",
