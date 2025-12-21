@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { z } from "zod";
+console.log("MONGODB_URL =", process.env.MONGODB_URL);
 
 const envSchema = z.object({
   NODE_ENV: z
