@@ -13,6 +13,8 @@ const envSchema = z.object({
   CORS_ORIGIN: z.url().default("http://localhost:8080"),
 
   MONGODB_URL: z.string({ error: "MongoDB URL connection string" }),
+
+  JWT_SECRET: z.string({ required_error: "JWT Secret is required" }),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
