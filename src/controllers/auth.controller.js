@@ -5,9 +5,9 @@ import { generateOtp } from "../utils/otp.js";
 import { hashPassword, comparePassword } from "../utils/password.js";
 import { signToken } from "../config/jwt.js";
 
-/**
- * REGISTER
- */
+/* =========================
+   REGISTER
+========================= */
 export const register = async (req, res) => {
   try {
     const {
@@ -20,15 +20,18 @@ export const register = async (req, res) => {
       password
     } = req.body;
 
-    // ---------- BASIC VALIDATION ----------
-    if (!userType || !phone || !password || !name) {
-  return res.status(400).json({ message: "Missing required fields" });
-}
+    /* -------- BASIC VALIDATION -------- */
+    if (!userType || !name || !phone || !password) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
 
     if (userType === "MIT") {
-      if (!regNumber || !learnerEmail) {
-        return res.status(400).json({ message: "MIT details required" });
+      if (!regNumber || !learnerEmail || !personalEmail) {
+        return res.status(400).json({
+          message: "Reg number, learner email and personal email are required"
+        });
       }
+
       if (!learnerEmail.endsWith("@learner.manipal.edu")) {
         return res.status(400).json({ message: "Invalid learner email" });
       }
@@ -38,7 +41,7 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: "Personal email required" });
     }
 
-    // ---------- DUPLICATE CHECK ----------
+    /* -------- DUPLICATE CHECK -------- */
     const existingUser = await User.findOne({
       $or: [
         { phone },
@@ -52,24 +55,25 @@ export const register = async (req, res) => {
       return res.status(409).json({ message: "User already exists" });
     }
 
-    // ---------- CREATE USER ----------
+    /* -------- CREATE USER -------- */
     const hashedPassword = await hashPassword(password);
 
-    const user = await User.create({
+    await User.create({
       userType,
       name,
       regNumber: userType === "MIT" ? regNumber : null,
       learnerEmail: userType === "MIT" ? learnerEmail : null,
-      personalEmail: personalEmail || null,
+      personalEmail,
       phone,
       password: hashedPassword,
       isVerified: false
     });
 
-    // ---------- OTP ----------
+    /* -------- OTP -------- */
     const otp = generateOtp();
-    const emailToSendOtp =
-      learnerEmail || personalEmail; // 👈 ALWAYS SEND TO ENTERED EMAIL
+
+    // ✅ ALWAYS SEND OTP TO PERSONAL EMAIL
+    const emailToSendOtp = personalEmail;
 
     await Otp.deleteMany({ email: emailToSendOtp });
 
@@ -79,29 +83,27 @@ export const register = async (req, res) => {
       expiresAt: new Date(Date.now() + 5 * 60 * 1000)
     });
 
-  try {
-  await sendOtpEmail(emailToSendOtp, otp);
-} catch (emailError) {
-  console.error("EMAIL FAILED 👉", emailError.message);
-  // DO NOT throw
-}
+    try {
+      await sendOtpEmail(emailToSendOtp, otp);
+    } catch (err) {
+      console.error("EMAIL FAILED 👉", err.message);
+    }
 
-return res.status(201).json({
-  message: "Registered successfully. OTP sent to email."
-});
+    return res.status(201).json({
+      message: "Registered successfully. OTP sent to personal email."
+    });
 
   } catch (error) {
-  console.error("REGISTER ERROR 👉", error);
-  return res.status(500).json({
-    message: "Registration failed",
-    error: error.message
-  });
-}
+    console.error("REGISTER ERROR 👉", error);
+    return res.status(500).json({
+      message: "Registration failed"
+    });
+  }
 };
 
-/**
- * VERIFY OTP
- */
+/* =========================
+   VERIFY OTP
+========================= */
 export const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -117,31 +119,28 @@ export const verifyOtp = async (req, res) => {
     }
 
     await User.findOneAndUpdate(
-      {
-        $or: [{ learnerEmail: email }, { personalEmail: email }]
-      },
+      { personalEmail: email },
       { isVerified: true }
     );
 
     await Otp.deleteMany({ email });
 
     return res.json({ message: "Email verified successfully" });
+
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "OTP verification failed" });
   }
 };
 
-/**
- * LOGIN
- */
+/* =========================
+   LOGIN
+========================= */
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({
-      $or: [{ learnerEmail: email }, { personalEmail: email }]
-    });
+    const user = await User.findOne({ personalEmail: email });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -165,14 +164,16 @@ export const login = async (req, res) => {
       message: "Login successful",
       token
     });
+
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Login failed" });
   }
 };
-/**
- * RESEND OTP
- */
+
+/* =========================
+   RESEND OTP
+========================= */
 export const resendOtp = async (req, res) => {
   try {
     const { email } = req.body;
@@ -181,10 +182,7 @@ export const resendOtp = async (req, res) => {
       return res.status(400).json({ message: "Email is required" });
     }
 
-    // Check if user exists
-    const user = await User.findOne({
-      $or: [{ learnerEmail: email }, { personalEmail: email }]
-    });
+    const user = await User.findOne({ personalEmail: email });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -194,20 +192,16 @@ export const resendOtp = async (req, res) => {
       return res.status(400).json({ message: "User already verified" });
     }
 
-    // Generate new OTP
     const otp = generateOtp();
 
-    // Remove old OTPs
     await Otp.deleteMany({ email });
 
-    // Save new OTP
     await Otp.create({
       email,
       otp,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000) // 5 min
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000)
     });
 
-    // Send OTP (non-blocking)
     try {
       await sendOtpEmail(email, otp);
     } catch (err) {
@@ -215,27 +209,21 @@ export const resendOtp = async (req, res) => {
     }
 
     return res.json({ message: "OTP resent successfully" });
+
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Resend OTP failed" });
   }
 };
-/**
- * =========================
- * FORGOT PASSWORD
- * =========================
- */
+
+/* =========================
+   FORGOT PASSWORD
+========================= */
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ message: "Email is required" });
-    }
-
-    const user = await User.findOne({
-      $or: [{ learnerEmail: email }, { personalEmail: email }]
-    });
+    const user = await User.findOne({ personalEmail: email });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -257,19 +245,17 @@ export const forgotPassword = async (req, res) => {
       console.error("EMAIL FAILED 👉", err.message);
     }
 
-    return res.json({
-      message: "Password reset OTP sent to email"
-    });
+    return res.json({ message: "Password reset OTP sent" });
+
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Forgot password failed" });
   }
 };
-/**
- * =========================
- * RESET PASSWORD
- * =========================
- */
+
+/* =========================
+   RESET PASSWORD
+========================= */
 export const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
@@ -280,24 +266,21 @@ export const resetPassword = async (req, res) => {
 
     const otpRecord = await Otp.findOne({ email, otp });
 
-    if (!otpRecord) {
-      return res.status(400).json({ message: "Invalid OTP" });
-    }
-
-    if (otpRecord.expiresAt < new Date()) {
-      return res.status(400).json({ message: "OTP expired" });
+    if (!otpRecord || otpRecord.expiresAt < new Date()) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
     const hashedPassword = await hashPassword(newPassword);
 
     await User.findOneAndUpdate(
-      { $or: [{ learnerEmail: email }, { personalEmail: email }] },
+      { personalEmail: email },
       { password: hashedPassword }
     );
 
     await Otp.deleteMany({ email });
 
     return res.json({ message: "Password reset successful" });
+
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Reset password failed" });

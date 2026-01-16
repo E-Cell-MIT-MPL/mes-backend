@@ -151,7 +151,7 @@ div[style*="background: white"] {
    INPUT FIELDS
    =============================== */
 input, select {
-  background: rgba(0, 0, 0, 0.5) !important;
+  background: rgba(218, 1, 1, 0.5) !important;
   border: 1px solid var(--glass-border) !important;
   color: var(--neon-cyan) !important;
   border-radius: 4px !important;
@@ -162,7 +162,7 @@ input, select {
 input:focus {
   outline: none !important;
   border-color: var(--neon-pink) !important;
-  box-shadow: 0 0 15px rgba(255, 0, 229, 0.3) !important;
+  box-shadow: 0 0 15px rgba(255, 0, 230, 0.788) !important;
 }
 
 /* ===============================

@@ -224,7 +224,7 @@ export default function App() {
       {step === 'VERIFY' && (
         <div style={formStyle}>
           <h2>Verify Email</h2>
-          <p>OTP sent to: {formData.userType === 'MIT' ? formData.learnerEmail : formData.personalEmail}</p>
+          <p>OTP sent to: {formData.userType === 'MIT' ? formData.personalEmail : formData.learnerEmail}</p>
           <input name="otp" placeholder="Enter 6-digit OTP" onChange={handleChange} style={inputStyle} />
           <button onClick={handleVerify} style={buttonStyle}>Verify Code</button>
         </div>
