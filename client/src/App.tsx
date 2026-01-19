@@ -224,7 +224,7 @@ export default function App() {
       {step === 'VERIFY' && (
         <div style={formStyle}>
           <h2>Verify Email</h2>
-          <p>OTP sent to: {formData.userType === 'MIT' ? formData.learnerEmail : formData.personalEmail}</p>
+          <p>OTP sent to: {formData.userType === 'MIT' ? formData.personalEmail : formData.learnerEmail}</p>
           <input name="otp" placeholder="Enter 6-digit OTP" onChange={handleChange} style={inputStyle} />
           <button onClick={handleVerify} style={buttonStyle}>Verify Code</button>
         </div>
@@ -278,7 +278,7 @@ export default function App() {
               <div>
                 <h2>Upcoming Events</h2>
                 <div style={cardStyle}>
-                  <h3>Revels 2025 - Day 1</h3>
+                  <h3>Keynote Session - Day 1</h3>
                   <p>Price: ₹500</p>
                   <button onClick={() => handleBuyTicket('Revels 2025')} style={buttonStyle}>
                     Buy Ticket
@@ -286,7 +286,7 @@ export default function App() {
                 </div>
                 
                 <div style={{ ...cardStyle, marginTop: '10px' }}>
-                  <h3>TechTatva Pro Show</h3>
+                  <h3>Influencer Conclave</h3>
                   <p>Price: ₹800</p>
                   <button onClick={() => handleBuyTicket('TechTatva Pro')} style={buttonStyle}>
                     Buy Ticket
