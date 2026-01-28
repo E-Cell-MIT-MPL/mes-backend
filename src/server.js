@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import { pino } from "pino";
 
 import httpLogger from "./middleware/requestLogger.js";
@@ -17,9 +18,13 @@ export const serverLogger = pino({ name: "server" });
 export const app = express();
 
 /* -------------------- GLOBAL MIDDLEWARES -------------------- */
-app.use(cors());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+  credentials: true  // Allow cookies in requests
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());  // Parse cookies from headers
 
 // Request logger (before routes)
 app.use(httpLogger);
