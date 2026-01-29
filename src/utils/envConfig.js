@@ -12,9 +12,27 @@ const envSchema = z.object({
 
   CORS_ORIGIN: z.url().default("http://localhost:8080"),
 
-  MONGODB_URL: z.string({ error: "MongoDB URL connection string" }),
+  MONGODB_URL: z
+    .string({ error: "MongoDB URL connection string" })
+    .min(1, { error: "MongoDB URL connection string" }),
 
-  JWT_SECRET: z.string({ required_error: "JWT Secret is required" }),
+  JWT_SECRET: z
+    .string({ error: "JWT Secret is required" })
+    .min(1, { error: "JWT Secret is required" }),
+
+  FRONTEND_URL: z.url().default("http://localhost:3000"),
+
+  // Payment Gateway
+  ATOM_MERCH_ID: z.string().optional(),
+  ATOM_MERCH_PASS: z.string().optional(),
+  ATOM_PROD_ID: z.string().optional(),
+  ATOM_AUTH_URL: z.url().optional(),
+  ATOM_PAYMENT_URL: z.url().optional(),
+  ATOM_REQ_ENC_KEY: z.string().optional(),
+  ATOM_REQ_SALT: z.string().optional(),
+  ATOM_RES_DEC_KEY: z.string().optional(),
+  ATOM_RES_SALT: z.string().optional(),
+  ATOM_RES_HASH_KEY: z.string().optional(),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
