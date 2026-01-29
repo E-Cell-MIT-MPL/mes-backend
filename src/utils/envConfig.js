@@ -16,11 +16,33 @@ const envSchema = z.object({
     .string({ error: "MongoDB URL connection string" })
     .min(1, { error: "MongoDB URL connection string" }),
 
+  QR_SECRET: z
+    .string({ error: "QR Secret is required" })
+    .min(1, { error: "QR Secret is required" }),
+
   JWT_SECRET: z
     .string({ error: "JWT Secret is required" })
     .min(1, { error: "JWT Secret is required" }),
 
   FRONTEND_URL: z.url().default("http://localhost:3000"),
+
+  // Email Configuration
+  EMAIL_HOST: z
+    .string({ error: "Email host is required" })
+    .min(1, { error: "Email host is required" }),
+  EMAIL_PORT: z.coerce
+    .number({ error: "Email port must be a number" })
+    .int()
+    .positive({ error: "Email port must be a positive integer" }),
+  EMAIL_USER: z
+    .string({ error: "Email user is required" })
+    .min(1, { error: "Email user is required" }),
+  EMAIL_PASS: z
+    .string({ error: "Email password is required" })
+    .min(1, { error: "Email password is required" }),
+  EMAIL_FROM: z
+    .string({ error: "Email from address is required" })
+    .min(1, { error: "Email from address is required" }),
 
   // Payment Gateway
   ATOM_MERCH_ID: z.string().optional(),

@@ -4,6 +4,7 @@ import { sendOtpEmail } from "../services/email.service.js";
 import { generateOtp } from "../utils/otp.js";
 import { hashPassword, comparePassword } from "../utils/password.js";
 import { signToken } from "../config/jwt.js";
+import { serverLogger } from "../server.js";
 
 /* =========================
    REGISTER
@@ -67,7 +68,7 @@ export const register = async (req, res) => {
     /* -------- OTP -------- */
     const otp = generateOtp();
 
-    // ✅ ALWAYS SEND OTP TO PERSONAL EMAIL
+    // ALWAYS SEND OTP TO PERSONAL EMAIL
     const emailToSendOtp = personalEmail;
 
     await Otp.deleteMany({ email: emailToSendOtp });
@@ -81,14 +82,14 @@ export const register = async (req, res) => {
     try {
       await sendOtpEmail(emailToSendOtp, otp);
     } catch (err) {
-      console.error("EMAIL FAILED 👉", err.message);
+      serverLogger.error("EMAIL FAILED", err.message);
     }
 
     return res.status(201).json({
       message: "Registered successfully. OTP sent to personal email.",
     });
   } catch (error) {
-    console.error("REGISTER ERROR 👉", error);
+    serverLogger.error("REGISTER ERROR", error);
     return res.status(500).json({
       message: "Registration failed",
     });
@@ -118,7 +119,7 @@ export const verifyOtp = async (req, res) => {
 
     return res.json({ message: "Email verified successfully" });
   } catch (error) {
-    console.error(error);
+    serverLogger.error("OTP Verification Error", error);
     return res.status(500).json({ message: "OTP verification failed" });
   }
 };
@@ -161,7 +162,7 @@ export const login = async (req, res) => {
         message: "Login successful",
       });
   } catch (error) {
-    console.error(error);
+    serverLogger.error("Login Error", error);
     return res.status(500).json({ message: "Login failed" });
   }
 };
@@ -200,12 +201,12 @@ export const resendOtp = async (req, res) => {
     try {
       await sendOtpEmail(email, otp);
     } catch (err) {
-      console.error("EMAIL FAILED 👉", err.message);
+      serverLogger.error("EMAIL FAILED", err.message);
     }
 
     return res.json({ message: "OTP resent successfully" });
   } catch (error) {
-    console.error(error);
+    serverLogger.error("Resend OTP Error", error);
     return res.status(500).json({ message: "Resend OTP failed" });
   }
 };
@@ -236,12 +237,12 @@ export const forgotPassword = async (req, res) => {
     try {
       await sendOtpEmail(email, otp);
     } catch (err) {
-      console.error("EMAIL FAILED 👉", err.message);
+      serverLogger.error("EMAIL FAILED 👉", err.message);
     }
 
     return res.json({ message: "Password reset OTP sent" });
   } catch (error) {
-    console.error(error);
+    serverLogger.error("Forgot Password Error", error);
     return res.status(500).json({ message: "Forgot password failed" });
   }
 };
@@ -274,7 +275,7 @@ export const resetPassword = async (req, res) => {
 
     return res.json({ message: "Password reset successful" });
   } catch (error) {
-    console.error(error);
+    serverLogger.error("Reset Password Error", error);
     return res.status(500).json({ message: "Reset password failed" });
   }
 };

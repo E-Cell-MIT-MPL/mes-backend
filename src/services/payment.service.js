@@ -1,7 +1,7 @@
 import unirest from "unirest";
 
 import { env } from "../utils/envConfig.js";
-import EncryptionService from "./encryption.service.js";
+import { decrypt, encrypt, verifySignature } from "./encryption.service.js";
 import Ticket from "../models/Ticket.model.js";
 import User from "../models/User.model.js";
 import { serverLogger } from "../server.js";
@@ -87,7 +87,7 @@ export const initiatePayment = async ({ userId, eventName, amount }) => {
 
     // Encrypt payload
     const jsonString = JSON.stringify(paymentPayload);
-    const encryptedData = EncryptionService.encrypt(jsonString);
+    const encryptedData = encrypt(jsonString);
 
     // Send request to ATOM gateway
     const response = await sendAuthRequest(encryptedData);
@@ -101,7 +101,7 @@ export const initiatePayment = async ({ userId, eventName, amount }) => {
     }
 
     // Decrypt response
-    const decryptedData = EncryptionService.decrypt(encData);
+    const decryptedData = decrypt(encData);
     const responseData = JSON.parse(decryptedData);
 
     serverLogger.info({ txnId, responseData }, "Payment initiation response");
@@ -170,7 +170,7 @@ export const sendAuthRequest = (encryptedData) => {
 export const handlePaymentCallback = async (encryptedResponse) => {
   try {
     // Decrypt response
-    const decryptedData = EncryptionService.decrypt(encryptedResponse);
+    const decryptedData = decrypt(encryptedResponse);
     const responseData = JSON.parse(decryptedData);
 
     serverLogger.info({ responseData }, "Payment callback received");
@@ -191,7 +191,7 @@ export const handlePaymentCallback = async (encryptedResponse) => {
       bankTxnId: payModeSpecificData.bankDetails.bankTxnId,
     };
 
-    const isSignatureValid = EncryptionService.verifySignature(
+    const isSignatureValid = verifySignature(
       signatureData,
       payDetails.signature,
     );

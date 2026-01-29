@@ -1,5 +1,8 @@
 import Ticket from "../models/Ticket.model.js";
-import PaymentService from "../services/payment.service.js";
+import {
+  handlePaymentCallback as handlePaymentCallbackService,
+  initiatePayment as initiatePaymentService,
+} from "../services/payment.service.js";
 import { env } from "../utils/envConfig.js";
 
 /**
@@ -18,7 +21,7 @@ export const initiatePayment = async (req, res) => {
       });
     }
 
-    const result = await PaymentService.initiatePayment({
+    const result = await initiatePaymentService({
       userId,
       eventName,
       amount: parseFloat(amount),
@@ -51,7 +54,7 @@ export const handlePaymentCallback = async (req, res) => {
       );
     }
 
-    const result = await PaymentService.handlePaymentCallback(encData);
+    const result = await handlePaymentCallbackService(encData);
 
     // Redirect to frontend based on status
     if (result.success) {

@@ -26,7 +26,6 @@
     "prettier": "3.7.4"
   },
   "dependencies": {
-    "@types/react": "^19.2.8",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -38,8 +37,6 @@
     "nodemailer": "^7.0.12",
     "pino": "^10.1.0",
     "pino-http": "^11.0.0",
-    "react-qr-code": "^2.0.18",
-    "react-qr-reader": "^3.0.0-beta-1",
     "unirest": "^0.6.0",
     "zod": "^4.2.1"
   }

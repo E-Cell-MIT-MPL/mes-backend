@@ -1,11 +1,12 @@
 import Ticket from "../models/Ticket.model.js";
 import { verifyQR } from "../config/qr.js";
+import { serverLogger } from "../server.js";
 
 export const scanTicket = async (req, res) => {
   try {
     const qrPayload = req.body;
 
-    // 1️⃣ Verify QR authenticity
+    // Verify QR authenticity
     if (!verifyQR(qrPayload)) {
       return res.status(400).json({
         success: false,
@@ -15,7 +16,7 @@ export const scanTicket = async (req, res) => {
 
     const { ticketId } = qrPayload;
 
-    // 2️⃣ Fetch ticket
+    // Fetch ticket
     const ticket = await Ticket.findById(ticketId).populate("userId");
 
     if (!ticket) {
@@ -25,7 +26,7 @@ export const scanTicket = async (req, res) => {
       });
     }
 
-    // 3️⃣ Block re-entry
+    // Block re-entry
     if (ticket.isUsed) {
       return res.status(409).json({
         success: false,
@@ -34,13 +35,13 @@ export const scanTicket = async (req, res) => {
       });
     }
 
-    // 4️⃣ Mark attendance
+    // Mark attendance
     ticket.isUsed = true;
     ticket.usedAt = new Date();
     ticket.usedBy = req.headers["x-device"] || "scanner";
     await ticket.save();
 
-    // 5️⃣ Success response
+    // Success response
     return res.json({
       success: true,
       message: "ENTRY ALLOWED",
@@ -53,7 +54,8 @@ export const scanTicket = async (req, res) => {
       scannedAt: ticket.usedAt,
     });
   } catch (error) {
-    console.error("SCAN ERROR 👉", error);
+    serverLogger.error("Scan Ticket Error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Scan failed",

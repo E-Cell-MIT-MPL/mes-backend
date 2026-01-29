@@ -1,6 +1,8 @@
 import crypto from "crypto";
 
-const QR_SECRET = process.env.QR_SECRET;
+import { env } from "../utils/envConfig.js";
+
+const { QR_SECRET } = env;
 
 export function signQR(payload) {
   const data = JSON.stringify(payload);
