@@ -1,9 +1,6 @@
 import mongoose from "mongoose";
 import { app, serverLogger } from "./server.js";
 import { env } from "./utils/envConfig.js";
-import authRoutes from "./routes/auth.route.js";
-
-
 
 /* ---------- CONNECT TO DB ---------- */
 (async () => {
@@ -31,7 +28,7 @@ const onCloseSignal = () => {
   server.close(async () => {
     serverLogger.info("server closed");
 
-    await mongoose.disconnect();
+    await mongoose.connection.close();
     serverLogger.info("Disconnected from MongoDB");
 
     process.exit();
