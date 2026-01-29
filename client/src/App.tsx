@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import QRCode from "react-qr-code"; // <--- IMPORT THIS
+import QRCode from "react-qr-code";
 // 1. Define the possible "Screens" or steps
 type Step = 'REGISTER' | 'VERIFY' | 'LOGIN' | 'DASHBOARD';
 type TicketData = string | null;
 export default function App() {
   const [step, setStep] = useState<Step>('REGISTER');
-  const [token, setToken] = useState<string>('');
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [myTickets, setMyTickets] = useState<any[]>([]);
   // We keep form data in parent state so we don't lose the email between steps
   const [formData, setFormData] = useState({
@@ -22,11 +22,22 @@ export default function App() {
   const [status, setStatus] = useState({ message: '', error: false });
   const [ticketQR, setTicketQR] = useState<TicketData>(null);
   useEffect(() => {
-    const savedToken = localStorage.getItem('token');
-    if (savedToken) {
-      setToken(savedToken);
-      setStep('DASHBOARD');
-    }
+    // Check if user is already logged in by attempting an authenticated request
+    const checkAuthStatus = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/tickets/my-tickets', {
+          credentials: 'include'  // Send cookies
+        });
+        if (res.ok) {
+          setIsLoggedIn(true);
+          setStep('DASHBOARD');
+        }
+      } catch (err) {
+        // Not logged in
+      }
+    };
+    
+    checkAuthStatus();
   }, []);
   // Generic handler for input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -41,13 +52,14 @@ export default function App() {
       const res = await fetch('http://localhost:5000/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',  // Include cookies
         body: JSON.stringify({
           userType: formData.userType,
           name: formData.name,
           phone: formData.phone,
           regNumber: formData.regNumber,
-          learnerEmail: formData.learnerEmail, // For MIT
-          personalEmail: formData.personalEmail, // For NON_MIT
+          learnerEmail: formData.learnerEmail,
+          personalEmail: formData.personalEmail,
           password: formData.password
         }),
       });
@@ -66,13 +78,13 @@ export default function App() {
 
   const handleVerify = async () => {
     setStatus({ message: 'Verifying...', error: false });
-    // Determine which email to use based on userType
     const emailToVerify = formData.userType === 'MIT' ? formData.learnerEmail : formData.personalEmail;
 
     try {
       const res = await fetch('http://localhost:5000/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',  // Include cookies
         body: JSON.stringify({
           email: emailToVerify,
           otp: formData.otp
@@ -99,6 +111,7 @@ export default function App() {
       const res = await fetch('http://localhost:5000/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',  // Include cookies in request
         body: JSON.stringify({
           email: emailToLogin,
           password: formData.password
@@ -107,8 +120,8 @@ export default function App() {
       const data = await res.json();
 
       if (res.ok) {
-        setToken(data.token); // Save the ID Card
-        localStorage.setItem('token', data.token); // <--- 2. SAVE TOKEN
+        // Cookie is automatically set by server, no need to save token
+        setIsLoggedIn(true);
         setStatus({ message: 'Login Successful!', error: false });
         setStep('DASHBOARD');
       } else {
@@ -121,15 +134,14 @@ export default function App() {
   const handleBuyTicket = async (eventName: string) => {
     setStatus({ message: `Processing payment for ${eventName}...`, error: false });
 
-    // Simulate Payment Gateway Delay
     setTimeout(async () => {
       try {
         const res = await fetch('http://localhost:5000/tickets/buy', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}` // <--- SEND TOKEN
+            'Content-Type': 'application/json'
           },
+          credentials: 'include',  // Cookie auto-sent
           body: JSON.stringify({ eventName }),
         });
 
@@ -137,35 +149,37 @@ export default function App() {
 
         if (res.ok) {
           setStatus({ message: 'Payment Successful! Ticket Generated.', error: false });
-          setTicketQR(data.qrData); // Save the QR string
+          setTicketQR(data.qrData);
         } else {
           setStatus({ message: data.message, error: true });
         }
       } catch (err) {
         setStatus({ message: 'Network Error', error: true });
       }
-    }, 2000); // 2 second mock delay
+    }, 2000);
   };
   const fetchTickets = async () => {
-    if (!token) return;
-    const res = await fetch('http://localhost:5000/tickets/my-tickets', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const data = await res.json();
-    if (res.ok) setMyTickets(data);
+    try {
+      const res = await fetch('http://localhost:5000/tickets/my-tickets', {
+        credentials: 'include'  // Cookie auto-sent
+      });
+      const data = await res.json();
+      if (res.ok) setMyTickets(data);
+    } catch (err) {
+      setStatus({ message: 'Failed to fetch tickets', error: true });
+    }
   };
   const handleLogout = () => {
-    setToken('');
-    localStorage.removeItem('token'); // <--- CLEARS LOGIN
+    setIsLoggedIn(false);
     setStep('LOGIN');
     setMyTickets([]);
   };
   // Call this when entering dashboard
   useEffect(() => {
-    if (step === 'DASHBOARD') {
+    if (step === 'DASHBOARD' && isLoggedIn) {
       fetchTickets();
     }
-  }, [step, token]);
+  }, [step, isLoggedIn]);
   /* ================= UI RENDERING ================= */
 
   return (
