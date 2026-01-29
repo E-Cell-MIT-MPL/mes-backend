@@ -5,39 +5,83 @@ const ticketSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true
+      required: true,
     },
 
     eventName: {
       type: String,
-      required: true
+      required: true,
     },
 
     qrData: {
       type: String,
-      required: true
+      required: true,
     },
 
-    isPaid: {
+    // Payment Details
+    txnId: {
+      type: String,
+      unique: true,
+      sparse: true, // Allows null for backward compatibility
+    },
+    atomTxnId: {
+      type: String,
+      default: null,
+    },
+    atomTokenId: {
+      type: String,
+      default: null,
+    },
+    amount: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["PENDING", "SUCCESS", "FAILED", "CANCELLED"],
+      default: "PENDING",
+    },
+    paymentMode: {
+      type: String,
+      default: null,
+    },
+    statusCode: {
+      type: String,
+      default: null,
+    },
+    statusMessage: {
+      type: String,
+      default: null,
+    },
+    signature: {
+      type: String,
+      default: null,
+    },
+    signatureVerified: {
       type: Boolean,
-      default: true
+      default: false,
+    },
+    rawResponse: {
+      type: Object,
+      default: null,
     },
 
-    // ✅ SCANNER / ATTENDANCE
+    // SCANNER / ATTENDANCE
     isUsed: {
       type: Boolean,
-      default: false
+      default: false,
     },
 
     usedAt: {
-      type: Date
+      type: Date,
     },
 
     usedBy: {
-      type: String
-    }
+      type: String,
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export default mongoose.model("Ticket", ticketSchema);

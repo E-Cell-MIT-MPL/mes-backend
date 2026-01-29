@@ -3,8 +3,6 @@ import { app, serverLogger } from "./server.js";
 import { env } from "./utils/envConfig.js";
 import authRoutes from "./routes/auth.route.js";
 
-
-
 /* ---------- CONNECT TO DB ---------- */
 (async () => {
   if (mongoose.connection.readyState >= 1) return;

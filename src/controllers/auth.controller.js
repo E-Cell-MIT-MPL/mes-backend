@@ -17,7 +17,7 @@ export const register = async (req, res) => {
       learnerEmail,
       personalEmail,
       phone,
-      password
+      password,
     } = req.body;
 
     /* -------- BASIC VALIDATION -------- */
@@ -28,7 +28,7 @@ export const register = async (req, res) => {
     if (userType === "MIT") {
       if (!regNumber || !learnerEmail || !personalEmail) {
         return res.status(400).json({
-          message: "Reg number, learner email and personal email are required"
+          message: "Reg number, learner email and personal email are required",
         });
       }
 
@@ -43,12 +43,7 @@ export const register = async (req, res) => {
 
     /* -------- DUPLICATE CHECK -------- */
     const existingUser = await User.findOne({
-      $or: [
-        { phone },
-        { learnerEmail },
-        { personalEmail },
-        { regNumber }
-      ]
+      $or: [{ phone }, { learnerEmail }, { personalEmail }, { regNumber }],
     });
 
     if (existingUser) {
@@ -66,7 +61,7 @@ export const register = async (req, res) => {
       personalEmail,
       phone,
       password: hashedPassword,
-      isVerified: false
+      isVerified: false,
     });
 
     /* -------- OTP -------- */
@@ -80,7 +75,7 @@ export const register = async (req, res) => {
     await Otp.create({
       email: emailToSendOtp,
       otp,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000)
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
 
     try {
@@ -90,13 +85,12 @@ export const register = async (req, res) => {
     }
 
     return res.status(201).json({
-      message: "Registered successfully. OTP sent to personal email."
+      message: "Registered successfully. OTP sent to personal email.",
     });
-
   } catch (error) {
     console.error("REGISTER ERROR 👉", error);
     return res.status(500).json({
-      message: "Registration failed"
+      message: "Registration failed",
     });
   }
 };
@@ -118,15 +112,11 @@ export const verifyOtp = async (req, res) => {
       return res.status(400).json({ message: "OTP expired" });
     }
 
-    await User.findOneAndUpdate(
-      { personalEmail: email },
-      { isVerified: true }
-    );
+    await User.findOneAndUpdate({ personalEmail: email }, { isVerified: true });
 
     await Otp.deleteMany({ email });
 
     return res.json({ message: "Email verified successfully" });
-
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "OTP verification failed" });
@@ -157,20 +147,19 @@ export const login = async (req, res) => {
 
     const token = signToken({
       userId: user._id,
-      userType: user.userType
+      userType: user.userType,
     });
 
     return res
-      .cookie('jwt', token, {
-        httpOnly: true,      // Prevents XSS attacks
-        secure: process.env.NODE_ENV === 'production',  // HTTPS only in production
-        sameSite: 'lax',     // CSRF protection
-        maxAge: 7 * 24 * 60 * 60 * 1000  // 7 days
+      .cookie("jwt", token, {
+        httpOnly: true, // Prevents XSS attacks
+        secure: process.env.NODE_ENV === "production", // HTTPS only in production
+        sameSite: "lax", // CSRF protection
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       })
       .json({
-        message: "Login successful"
+        message: "Login successful",
       });
-
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Login failed" });
@@ -205,7 +194,7 @@ export const resendOtp = async (req, res) => {
     await Otp.create({
       email,
       otp,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000)
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
 
     try {
@@ -215,7 +204,6 @@ export const resendOtp = async (req, res) => {
     }
 
     return res.json({ message: "OTP resent successfully" });
-
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Resend OTP failed" });
@@ -242,7 +230,7 @@ export const forgotPassword = async (req, res) => {
     await Otp.create({
       email,
       otp,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000)
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
 
     try {
@@ -252,7 +240,6 @@ export const forgotPassword = async (req, res) => {
     }
 
     return res.json({ message: "Password reset OTP sent" });
-
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Forgot password failed" });
@@ -280,13 +267,12 @@ export const resetPassword = async (req, res) => {
 
     await User.findOneAndUpdate(
       { personalEmail: email },
-      { password: hashedPassword }
+      { password: hashedPassword },
     );
 
     await Otp.deleteMany({ email });
 
     return res.json({ message: "Password reset successful" });
-
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Reset password failed" });

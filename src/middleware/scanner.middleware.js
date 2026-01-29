@@ -18,7 +18,7 @@ export const scanTicket = async (req, res) => {
     if (ticket.isUsed) {
       return res.status(409).json({
         message: "Already used",
-        usedAt: ticket.usedAt
+        usedAt: ticket.usedAt,
       });
     }
 
@@ -32,9 +32,8 @@ export const scanTicket = async (req, res) => {
       success: true,
       name: qrPayload.name,
       regNumber: qrPayload.regNumber,
-      eventName: qrPayload.eventName
+      eventName: qrPayload.eventName,
     });
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Scan failed" });

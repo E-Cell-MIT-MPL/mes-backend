@@ -6,8 +6,8 @@ const transporter = nodemailer.createTransport({
   secure: false,
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
+    pass: process.env.EMAIL_PASS,
+  },
 });
 
 export const sendOtpEmail = async (to, otp) => {
@@ -18,7 +18,7 @@ export const sendOtpEmail = async (to, otp) => {
     to,
     subject: "Your OTP",
     text: `Your OTP is ${otp}`,
-    html: `<h2>Your OTP is ${otp}</h2>`
+    html: `<h2>Your OTP is ${otp}</h2>`,
   });
 
   console.log("✅ SMTP accepted:", info.response);

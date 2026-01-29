@@ -9,7 +9,7 @@ export const scanTicket = async (req, res) => {
     if (!verifyQR(qrPayload)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid or tampered QR"
+        message: "Invalid or tampered QR",
       });
     }
 
@@ -21,7 +21,7 @@ export const scanTicket = async (req, res) => {
     if (!ticket) {
       return res.status(404).json({
         success: false,
-        message: "Ticket not found"
+        message: "Ticket not found",
       });
     }
 
@@ -30,7 +30,7 @@ export const scanTicket = async (req, res) => {
       return res.status(409).json({
         success: false,
         message: "Ticket already used",
-        usedAt: ticket.usedAt
+        usedAt: ticket.usedAt,
       });
     }
 
@@ -47,19 +47,16 @@ export const scanTicket = async (req, res) => {
       attendee: {
         name: ticket.userId.name,
         email:
-          ticket.userId.learnerEmail ||
-          ticket.userId.personalEmail ||
-          null
+          ticket.userId.learnerEmail || ticket.userId.personalEmail || null,
       },
       eventName: ticket.eventName,
-      scannedAt: ticket.usedAt
+      scannedAt: ticket.usedAt,
     });
-
   } catch (error) {
     console.error("SCAN ERROR 👉", error);
     return res.status(500).json({
       success: false,
-      message: "Scan failed"
+      message: "Scan failed",
     });
   }
 };

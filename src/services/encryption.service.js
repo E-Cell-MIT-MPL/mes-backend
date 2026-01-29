@@ -55,9 +55,9 @@ export const generateSignature = (data) => {
       data.merchId.toString() +
       data.atomTxnId +
       data.merchTxnId.toString() +
-      data.amount +
-      data.productId +
-      data.date;
+      data.amount.toFixed(2).toString() +
+      data.subChannel +
+      data.bankTxnId;
 
     const hmac = crypto.createHmac("sha512", resHashKey);
     const signature = hmac.update(signatureString);

@@ -30,7 +30,7 @@ The response format is strictly enforced and will always follow the structure ou
 Here’s how the codebase is organised:
 
 | Directory      | Purpose                          |
-|----------------|----------------------------------|
+| -------------- | -------------------------------- |
 | `src/`         | Main application code            |
 | `index.js`     | Entry point for development mode |
 | `server.js`    | Bootstrapping of Express app     |
@@ -39,13 +39,13 @@ Here’s how the codebase is organised:
 Key files to note:
 
 - `src/` with example feature as user
-    - `/route/user.js`: handle only routes
-    - `/controller/user.js`: handle only request and response functionality
-    - `/service/user.js`: handle business logic
-    - `/model/user.js`: contain database (e.g. MongoDb through Mongoose or SQL) models, preferably with request zod
-      schemas
-    - `src/middleware/requestLogger.ts`: logging setup.
-    - `src/utils/envConfig.ts`: environment schema with Zod.
+  - `/route/user.js`: handle only routes
+  - `/controller/user.js`: handle only request and response functionality
+  - `/service/user.js`: handle business logic
+  - `/model/user.js`: contain database (e.g. MongoDb through Mongoose or SQL) models, preferably with request zod
+    schemas
+  - `src/middleware/requestLogger.ts`: logging setup.
+  - `src/utils/envConfig.ts`: environment schema with Zod.
 
 ---
 
