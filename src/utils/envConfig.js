@@ -34,16 +34,16 @@ const envSchema = z.object({
     .number({ error: "Email port must be a number" })
     .int()
     .positive({ error: "Email port must be a positive integer" }),
-  EMAIL_USER: z
-    .string({ error: "Email user is required" })
-    .min(1, { error: "Email user is required" }),
+
   EMAIL_PASS: z
     .string({ error: "Email password is required" })
     .min(1, { error: "Email password is required" }),
   EMAIL_FROM: z
     .string({ error: "Email from address is required" })
     .min(1, { error: "Email from address is required" }),
-
+  RESEND_API_KEY: z
+    .string({ error: "resend key is required" })
+    .min(1, { error: "resend key  is required" }),
   // Payment Gateway
   ATOM_MERCH_ID: z.string().optional(),
   ATOM_MERCH_PASS: z.string().optional(),

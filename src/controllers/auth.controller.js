@@ -51,24 +51,8 @@ export const register = async (req, res) => {
       return res.status(409).json({ message: "User already exists" });
     }
 
-    /* -------- CREATE USER -------- */
-    const hashedPassword = await hashPassword(password);
-
-    await User.create({
-      userType,
-      name,
-      regNumber: userType === "MIT" ? regNumber : null,
-      learnerEmail: userType === "MIT" ? learnerEmail : null,
-      personalEmail,
-      phone,
-      password: hashedPassword,
-      isVerified: false,
-    });
-
-    /* -------- OTP -------- */
+    /* -------- GENERATE AND SEND OTP FIRST -------- */
     const otp = generateOtp();
-
-    // ALWAYS SEND OTP TO PERSONAL EMAIL
     const emailToSendOtp = personalEmail;
 
     await Otp.deleteMany({ email: emailToSendOtp });
@@ -83,10 +67,31 @@ export const register = async (req, res) => {
       await sendOtpEmail(emailToSendOtp, otp);
     } catch (err) {
       serverLogger.error("EMAIL FAILED", err.message);
+      return res.status(500).json({ message: "Failed to send OTP email" });
     }
 
+    /* -------- STORE TEMPORARY REGISTRATION DATA -------- */
+    // Store registration data temporarily (you may want to use a separate TempUser model or Redis)
+    const hashedPassword = await hashPassword(password);
+
+    await Otp.findOneAndUpdate(
+      { email: emailToSendOtp },
+      {
+        registrationData: {
+          userType,
+          name,
+          regNumber: userType === "MIT" ? regNumber : null,
+          learnerEmail: userType === "MIT" ? learnerEmail : null,
+          personalEmail,
+          phone,
+          password: hashedPassword,
+        },
+      },
+      { new: true }
+    );
+
     return res.status(201).json({
-      message: "Registered successfully. OTP sent to personal email.",
+      message: "OTP sent to personal email. Verify to complete registration.",
     });
   } catch (error) {
     serverLogger.error("REGISTER ERROR", error);
@@ -110,10 +115,20 @@ export const verifyOtp = async (req, res) => {
     }
 
     if (otpRecord.expiresAt < new Date()) {
+      await Otp.deleteMany({ email });
       return res.status(400).json({ message: "OTP expired" });
     }
 
-    await User.findOneAndUpdate({ personalEmail: email }, { isVerified: true });
+    /* -------- CREATE USER AFTER OTP VERIFICATION -------- */
+    if (otpRecord.registrationData) {
+      await User.create({
+        ...otpRecord.registrationData,
+        isVerified: true,
+      });
+    } else {
+      // For existing users resending OTP
+      await User.findOneAndUpdate({ personalEmail: email }, { isVerified: true });
+    }
 
     await Otp.deleteMany({ email });
 
