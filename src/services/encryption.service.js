@@ -1,49 +1,45 @@
 import crypto from "crypto";
 import { env } from "../utils/envConfig.js";
 
-const req_enc_key = env.ATOM_REQ_ENC_KEY;
-const req_salt = env.ATOM_REQ_SALT;
-const res_dec_key = env.ATOM_RES_DEC_KEY;
-const res_salt = env.ATOM_RES_SALT;
+const reqKey = Buffer.from(env.ATOM_REQ_ENC_KEY.substring(0, 16), "utf8");
+const reqIv = Buffer.from(env.ATOM_REQ_SALT.substring(0, 16), "utf8");
+const resKey = Buffer.from(env.ATOM_RES_DEC_KEY.substring(0, 16), "utf8");
+const resIv = Buffer.from(env.ATOM_RES_SALT.substring(0, 16), "utf8");
+const resHashKey = env.ATOM_RES_HASH_KEY; // <-- Make sure this is here!
 
-const resHashKey = env.ATOM_RES_HASH_KEY;
-
-const algorithm = "aes-256-cbc";
-const password = Buffer.from(req_enc_key, "utf8");
-const salt = Buffer.from(req_salt, "utf8");
-const respassword = Buffer.from(res_dec_key, "utf8");
-const ressalt = Buffer.from(res_salt, "utf8");
-const iv = Buffer.from(
-  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-  "utf8",
-);
+const algorithm = "aes-128-cbc"; 
 
 export const encrypt = (text) => {
   try {
-    const derivedKey = crypto.pbkdf2Sync(password, salt, 65536, 32, "sha512");
-    const cipher = crypto.createCipheriv(algorithm, derivedKey, iv);
-    let encrypted = cipher.update(text);
-    encrypted = Buffer.concat([encrypted, cipher.final()]);
-    return `${encrypted.toString("hex")}`;
+    // Verified: using reqKey and reqIv
+    const cipher = crypto.createCipheriv(algorithm, reqKey, reqIv);
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return encrypted.toUpperCase();
   } catch (error) {
     throw new Error(`Encryption failed: ${error.message}`);
   }
 };
 
+// ADD THIS NEW FUNCTION BELOW YOUR ENCRYPT FUNCTION
+export const decryptRequest = (text) => {
+  try {
+    // This uses reqKey/reqIv to check the payload YOU just encrypted
+    const decipher = crypto.createDecipheriv(algorithm, reqKey, reqIv);
+    let decrypted = decipher.update(text, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  } catch (error) {
+    return "DECRYPTION_FAILED_CHECK_KEYS";
+  }
+};
+
 export const decrypt = (text) => {
   try {
-    const encryptedText = Buffer.from(text, "hex");
-    const derivedKey = crypto.pbkdf2Sync(
-      respassword,
-      ressalt,
-      65536,
-      32,
-      "sha512",
-    );
-    const decipher = crypto.createDecipheriv(algorithm, derivedKey, iv);
-    let decrypted = decipher.update(encryptedText);
-    decrypted = Buffer.concat([decrypted, decipher.final()]);
-    return decrypted.toString();
+    const decipher = crypto.createDecipheriv(algorithm, resKey, resIv);
+    let decrypted = decipher.update(text, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
   } catch (error) {
     throw new Error(`Decryption failed: ${error.message}`);
   }
@@ -51,25 +47,47 @@ export const decrypt = (text) => {
 
 export const generateSignature = (data) => {
   try {
-    const signatureString =
-      data.merchId.toString() +
-      data.atomTxnId +
-      data.merchTxnId.toString() +
-      data.amount.toFixed(2).toString() +
-      data.subChannel +
-      data.bankTxnId;
+    // 1. Clean the data to prevent "undefined" or "null" appearing in the string
+    const merchId = data.merchId?.toString() || "";
+    const atomTxnId = data.atomTxnId || "";
+    const merchTxnId = data.merchTxnId?.toString() || "";
+    const amount = parseFloat(data.amount).toFixed(2); // Forces "199.00"
+    const subChannel = (Array.isArray(data.subChannel) ? data.subChannel[0] : data.subChannel) || "";
+    const bankTxnId = data.bankTxnId || "";
 
-    const hmac = crypto.createHmac("sha512", resHashKey);
-    const signature = hmac.update(signatureString);
-    const gen_hmac = signature.digest("hex");
+    // 2. The strict sequence for Atom/NTT Data
+    const signatureString = 
+      merchId + 
+      atomTxnId + 
+      merchTxnId + 
+      amount + 
+      subChannel + 
+      bankTxnId;
 
-    return gen_hmac;
+    console.log("[DEBUG] Verifying Signature for String:", signatureString);
+
+    // 3. HMAC-SHA512
+    return crypto
+      .createHmac("sha512", resHashKey)
+      .update(signatureString)
+      .digest("hex");
+      
   } catch (error) {
     throw new Error(`Signature generation failed: ${error.message}`);
   }
 };
 
 export const verifySignature = (data, receivedSignature) => {
+  if (!receivedSignature) return false;
+  
   const generatedSignature = generateSignature(data);
-  return generatedSignature === receivedSignature;
+  
+  // Use timingSafeEqual to prevent timing attacks (Good practice for Tech Heads!)
+  const a = Buffer.from(generatedSignature);
+  const b = Buffer.from(receivedSignature);
+  
+  const isValid = a.length === b.length && crypto.timingSafeEqual(a, b);
+  
+  console.log(`[DEBUG] Signature Match: ${isValid}`);
+  return isValid;
 };

@@ -1,7 +1,7 @@
 import unirest from "unirest";
 
 import { env } from "../utils/envConfig.js";
-import { decrypt, encrypt, verifySignature } from "./encryption.service.js";
+import { decrypt, decryptRequest, encrypt, verifySignature } from "./encryption.service.js";
 import Ticket from "../models/Ticket.model.js";
 import User from "../models/User.model.js";
 import { serverLogger } from "../server.js";
@@ -31,7 +31,11 @@ export const initiatePayment = async ({ userId, eventName, amount }) => {
 
     // Generate transaction ID
     const txnId = generateTxnId();
-    const txnDate = new Date().toISOString().slice(0, 19).replace("T", " ");
+const txnDate = new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false
+}).format(new Date()).replace(',', ''); // Result: 31/01/2026 10:30:45
 
     // Create ticket record (pending payment)
     const qrDataObj = {
@@ -51,43 +55,44 @@ export const initiatePayment = async ({ userId, eventName, amount }) => {
     });
 
     // Prepare payment request payload
-    const paymentPayload = {
-      payInstrument: {
-        headDetails: {
-          version: "OTSv1.1",
-          api: "AUTH",
-          platform: "FLASH",
-        },
-        merchDetails: {
-          merchId: env.ATOM_MERCH_ID,
-          userId: "",
-          password: env.ATOM_MERCH_PASS,
-          merchTxnId: txnId,
-          merchTxnDate: txnDate,
-        },
-        payDetails: {
-          amount: amount.toString(),
-          product: env.ATOM_PROD_ID,
-          custAccNo: phone,
-          txnCurrency: "INR",
-        },
-        custDetails: {
-          custEmail: email,
-          custMobile: phone,
-        },
-        extras: {
-          udf1: user.name || "",
-          udf2: eventName,
-          udf3: "",
-          udf4: "",
-          udf5: "",
-        },
-      },
-    };
+   const paymentPayload = {
+  login: env.ATOM_MERCH_ID,        // 571016
+  pass: "f82d6abe",               // Your transaction password
+  ttype: "Sale",        // Required for Paynetz (Standard Sale)
+  prodid: "ACADEMY",              // env.ATOM_PROD_ID
+  amt: parseFloat(amount).toFixed(2),
+  txncurr: "INR",
+  txnid: txnId,                   // merchTxnId
+  date: txnDate,                  // merchTxnDate
+  custacc: phone,                 // custAccNo
+  mcc: "8220",                    // mccCode
+  // Use the details from your original object
+  udf1: user.name || "",
+  udf2: eventName,
+  // Add these for legacy support
+  clientcode: "NA",
+  txnscamt: "0.00"
+};
 
     // Encrypt payload
     const jsonString = JSON.stringify(paymentPayload);
     const encryptedData = encrypt(jsonString);
+
+
+
+// --- DEBUG START ---
+console.log("=== ENCRYPTION ROUND-TRIP TEST ===");
+console.log("1. Raw JSON being sent:", jsonString);
+console.log("2. Encrypted Hex (to Atom):", encryptedData);
+
+try {
+    const doubleCheck = decryptRequest(encryptedData);
+    console.log("3. Decrypted back (The 'ID Card'):", doubleCheck);
+} catch (e) {
+    console.error("3. ERROR: Decryption failed! The gateway won't be able to read this either.",e);
+}
+console.log("==================================");
+// --- DEBUG END ---
 
     // Send request to ATOM gateway
     const response = await sendAuthRequest(encryptedData);
@@ -141,26 +146,25 @@ export const initiatePayment = async ({ userId, eventName, amount }) => {
 /**
  * Send authentication request to ATOM
  */
-export const sendAuthRequest = (encryptedData) => {
+// Inside your payment.service.js
+export const sendAuthRequest = async (encryptedData) => {
   return new Promise((resolve, reject) => {
-    const req = unirest.post(env.ATOM_AUTH_URL);
-
-    req.headers({
-      "cache-control": "no-cache",
-      "content-type": "application/x-www-form-urlencoded",
-    });
-
-    req.form({
-      encData: encryptedData,
-      merchId: env.ATOM_MERCH_ID,
-    });
-
-    req.end((res) => {
-      if (res.error) {
-        return reject(new Error("Payment gateway request failed"));
-      }
-      resolve(res.body);
-    });
+    unirest
+      .post(process.env.ATOM_AUTH_URL) // https://payment.atomtech.in/paynetz/epi/fts
+      .headers({
+        'Content-Type': 'application/x-www-form-urlencoded'
+      })
+      // Legacy Paynetz expects these specific form fields
+      .send(`encdata=${encryptedData}& login=${process.env.ATOM_MERCH_ID}`)
+      .end((response) => {
+        if (response.error || response.status === 500) {
+          console.error("[DEBUG] Gateway Error Body:", response.body);
+          return reject(new Error("Gateway processing failed. Check credentials."));
+        }
+        
+        // This endpoint usually returns a string or a token directly
+        resolve(response.body);
+      });
   });
 };
 
