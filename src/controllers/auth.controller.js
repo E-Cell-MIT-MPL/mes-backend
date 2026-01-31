@@ -294,3 +294,31 @@ export const resetPassword = async (req, res) => {
     return res.status(500).json({ message: "Reset password failed" });
   }
 };
+
+/* =========================
+   GET CURRENT USER (ME)
+========================= */
+export const getMe = async (req, res) => {
+  try {
+    // req.user.userId is populated by your protect/auth middleware
+    const user = await User.findById(req.user.userId).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Return exactly what the frontend AuthContext expects
+    return res.status(200).json({
+      success: true,
+      data: {
+        name: user.name,
+        regNumber: user.regNumber,
+        personalEmail: user.personalEmail,
+        userType: user.userType,
+      },
+    });
+  } catch (error) {
+    serverLogger.error("GET_ME ERROR", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch profile" });
+  }
+};
