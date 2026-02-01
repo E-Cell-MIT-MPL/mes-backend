@@ -43,9 +43,15 @@ export const register = async (req, res) => {
     }
 
     /* -------- DUPLICATE CHECK -------- */
-    const existingUser = await User.findOne({
-      $or: [{ phone }, { learnerEmail }, { personalEmail }, { regNumber }],
-    });
+    const existingUser = await User.findOne({ personalEmail }); 
+
+    if (existingUser) {
+        if (existingUser.isVerified) {
+            return res.status(409).json({ message: "User already exists" });
+        }
+        await User.deleteOne({ _id: existingUser._id });
+    }
+// ... Proceed with creating the new user and sending OTP ...
 
     if (existingUser) {
       return res.status(409).json({ message: "User already exists" });

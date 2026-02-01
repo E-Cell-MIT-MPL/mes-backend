@@ -48,13 +48,9 @@
   export const handlePaymentCallback = async (req, res) => {
     try {
       const { encData } = req.body; 
-      
       if (!encData) return res.status(400).send("No data received");
   
       const decryptedRaw = decryptAtom(encData);
-      console.log("🏁 PAYMENT CALLBACK RECEIVED:", decryptedRaw);
-  
-      // FIX: Atom wraps everything in payInstrument
       const decrypted = decryptedRaw.payInstrument;
   
       if (!decrypted || !decrypted.responseDetails) {
@@ -63,24 +59,30 @@
   
       const { merchTxnId } = decrypted.merchDetails;
       const { statusCode } = decrypted.responseDetails;
+      
+      // 👇 FIX: Get userId from the UDF2 field we sent earlier
+      const userIdFromAtom = decrypted.extras.udf2; 
   
       if (statusCode === "OTS0000") {
+        // Generate the secure QR hash using the ID returned by Atom
         const encryptedData = encryptTicketData({
-            u: userId,              // Use short keys to keep QR less dense
-            t: merchTxnId,          // Ticket ID
-            e: "MES2026",           // Event code
-            v: Date.now()           // Verification timestamp
+            u: userIdFromAtom,         
+            t: merchTxnId,          
+            e: "MES2026",           
+            v: Date.now()           
         });
-    
+  
         await Ticket.findOneAndUpdate(
-            { txnId: merchTxnId },
-            { 
-                paymentStatus: "SUCCESS", 
-                qrData: encryptedData // 👈 Save the encrypted hash here
-            }
+          { txnId: merchTxnId },
+          { 
+              paymentStatus: "SUCCESS", 
+              qrData: encryptedData, // Save the secure hash
+              atomTxnId: decrypted.payDetails.atomTxnId 
+          }
         );
-    }else {
-        // ❌ PAYMENT FAILED
+        
+        return res.redirect(`${env.FRONTEND_URL}/student?status=success`);
+      } else {
         await Ticket.findOneAndUpdate(
           { txnId: merchTxnId },
           { paymentStatus: "FAILED" }
