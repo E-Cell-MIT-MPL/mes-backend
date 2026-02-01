@@ -175,9 +175,7 @@ export const login = async (req, res) => {
     return res
   .cookie("jwt", token, {
     httpOnly: true,
-    // MUST be true for cross-site cookies
     secure: true, 
-    // MUST be "none" to allow GoDaddy to send cookies to Render
     sameSite: "none", 
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   })

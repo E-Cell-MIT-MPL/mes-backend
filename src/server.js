@@ -17,32 +17,17 @@ export const app = express();
 
 /* -------------------- GLOBAL MIDDLEWARES -------------------- */
 
-// 👇 CORS FIX: Use env.FRONTEND_URL to match your .env file
-// Change this:
+// server.js / index.js
 const allowedOrigins = [
-  env.FRONTEND_URL, 
-  "http://localhost:3000",
-  "https://mes26.ecellmit.in" // Explicitly add this to be safe
+  "https://mes26.ecellmit.in", // No trailing slash!
+  "http://localhost:3000"
 ];
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
-      
-      // Use .includes for cleaner logic and trim strings if necessary
-      const normalizedOrigin = origin.replace(/\/$/, "");
-      const isAllowed = allowedOrigins.some(o => o?.replace(/\/$/, "") === normalizedOrigin);
-
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        serverLogger.error(`CORS Blocked: ${origin}`);
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: "https://mes26.ecellmit.in", // Use the EXACT domain from your browser address bar
+    credentials: true, // This allows the 'requireAuth' middleware to see req.cookies
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"]
   })
 );
