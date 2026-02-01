@@ -17,8 +17,8 @@ export const app = express();
 
 /* -------------------- GLOBAL MIDDLEWARES -------------------- */
 // Add this before your routes to handle preflight globally
-app.options("*", cors());
-// server.js / index.js
+// The {*splat} syntax is the Express 5 way to handle global wildcards
+app.options("{*splat}", cors());// server.js / index.js
 const allowedOrigins = [
   "https://mes26.ecellmit.in",
   "https://www.mes26.ecellmit.in", // Add the WWW version just in case
