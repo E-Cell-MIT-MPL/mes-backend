@@ -20,19 +20,24 @@ export const app = express();
 // 👇 CORS FIX: Use env.FRONTEND_URL to match your .env file
 // Change this:
 const allowedOrigins = [
-  env.FRONTEND_URL, // Use your imported env object
+  env.FRONTEND_URL, 
   "http://localhost:3000",
+  "https://mes26.ecellmit.in" // Explicitly add this to be safe
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl)
       if (!origin) return callback(null, true);
       
-      if (allowedOrigins.indexOf(origin) !== -1) {
+      // Use .includes for cleaner logic and trim strings if necessary
+      const normalizedOrigin = origin.replace(/\/$/, "");
+      const isAllowed = allowedOrigins.some(o => o?.replace(/\/$/, "") === normalizedOrigin);
+
+      if (isAllowed) {
         callback(null, true);
       } else {
+        serverLogger.error(`CORS Blocked: ${origin}`);
         callback(new Error("Not allowed by CORS"));
       }
     },
