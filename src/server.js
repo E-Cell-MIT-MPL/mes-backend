@@ -16,17 +16,25 @@ export const serverLogger = pino({ name: "server" });
 export const app = express();
 
 /* -------------------- GLOBAL MIDDLEWARES -------------------- */
-
+// Add this before your routes to handle preflight globally
+app.options("*", cors());
 // server.js / index.js
 const allowedOrigins = [
-  "https://mes26.ecellmit.in", // No trailing slash!
+  "https://mes26.ecellmit.in",
+  "https://www.mes26.ecellmit.in", // Add the WWW version just in case
   "http://localhost:3000"
 ];
 
 app.use(
   cors({
-    origin: "https://mes26.ecellmit.in", // Use the EXACT domain from your browser address bar
-    credentials: true, // This allows the 'requireAuth' middleware to see req.cookies
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS blocked this origin"));
+      }
+    },
+    credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"]
   })
