@@ -1,6 +1,5 @@
 import axios from "axios";
 import { env } from "../utils/envConfig.js";
-import { decrypt, decryptRequest, encrypt, verifySignature } from "./encryption.service.js";
 import Ticket from "../models/Ticket.model.js";
 import { encryptAtom, decryptAtom } from "../utils/atomAuth.js";
 
@@ -12,32 +11,10 @@ const getFormattedDate = () => {
 
 export const initiatePayment = async ({ userId, eventName, amount, userEmail, userMobile }) => {
   try {
-    // Get user details
-    const user = await User.findById(userId);
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    const email = user.personalEmail;
-    const phone = user.phone || "9999999999"; // Fallback
-
-    // Generate transaction ID
-    const txnId = generateTxnId();
-const txnDate = new Intl.DateTimeFormat('en-GB', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-    hour12: false
-}).format(new Date()).replace(',', ''); // Result: 31/01/2026 10:30:45
-
-    // Create ticket record (pending payment)
-    const qrDataObj = {
-      username: user.name,
-      email,
-      eventName,
-      timestamp: new Date().toISOString(),
-    };
-
-    const ticket = await Ticket.create({
+    const txnId = `MES${Date.now()}`;
+    
+    // 1. Create Ticket
+    await Ticket.create({
       userId,
       eventName,
       qrData: "PENDING",
@@ -46,146 +23,56 @@ const txnDate = new Intl.DateTimeFormat('en-GB', {
       paymentStatus: "PENDING",
     });
 
-    // Prepare payment request payload
-   const paymentPayload = {
-  login: env.ATOM_MERCH_ID,        // 571016
-  pass: "f82d6abe",               // Your transaction password
-  ttype: "Sale",        // Required for Paynetz (Standard Sale)
-  prodid: "ACADEMY",              // env.ATOM_PROD_ID
-  amt: parseFloat(amount).toFixed(2),
-  txncurr: "INR",
-  txnid: txnId,                   // merchTxnId
-  date: txnDate,                  // merchTxnDate
-  custacc: phone,                 // custAccNo
-  mcc: "8220",                    // mccCode
-  // Use the details from your original object
-  udf1: user.name || "",
-  udf2: eventName,
-  // Add these for legacy support
-  clientcode: "NA",
-  txnscamt: "0.00"
-};
-
-    // Encrypt payload
-    const jsonString = JSON.stringify(paymentPayload);
-    const encryptedData = encrypt(jsonString);
-
-
-
-// --- DEBUG START ---
-console.log("=== ENCRYPTION ROUND-TRIP TEST ===");
-console.log("1. Raw JSON being sent:", jsonString);
-console.log("2. Encrypted Hex (to Atom):", encryptedData);
-
-try {
-    const doubleCheck = decryptRequest(encryptedData);
-    console.log("3. Decrypted back (The 'ID Card'):", doubleCheck);
-} catch (e) {
-    console.error("3. ERROR: Decryption failed! The gateway won't be able to read this either.",e);
-}
-console.log("==================================");
-// --- DEBUG END ---
-
-    // Send request to ATOM gateway
-    const response = await sendAuthRequest(encryptedData);
-
-    // Parse response
-    const params = new URLSearchParams(response);
-    const encData = params.get("encData");
-
-    if (!encData) {
-      throw new Error("Invalid response from payment gateway");
-    }
-
-    // Decrypt response
-    const decryptedData = decrypt(encData);
-    const responseData = JSON.parse(decryptedData);
-
-    serverLogger.info({ txnId, responseData }, "Payment initiation response");
-
-    // Check response status
-    if (responseData.responseDetails.txnStatusCode !== "OTS0000") {
-      ticket.paymentStatus = "FAILED";
-      ticket.statusCode = responseData.responseDetails.txnStatusCode;
-      ticket.statusMessage = responseData.responseDetails.statusMessage;
-      await ticket.save();
-
-      throw new Error(
-        responseData.responseDetails.statusMessage ||
-          "Payment initiation failed",
-      );
-    }
-
-    // Update ticket with token
-    ticket.atomTokenId = responseData.atomTokenId;
-    ticket.rawResponse = responseData;
-    await ticket.save();
-
-    return {
-      success: true,
-      txnId,
-      ticketId: ticket._id,
-      atomTokenId: responseData.atomTokenId,
-      paymentUrl: env.ATOM_PAYMENT_URL,
-      merchId: env.ATOM_MERCH_ID,
-    };
-
-/**
- * Send authentication request to ATOM
- */
-// Inside your payment.service.js
-export const sendAuthRequest = async (encryptedData) => {
-  return new Promise((resolve, reject) => {
-    unirest
-      .post(process.env.ATOM_AUTH_URL) // https://payment.atomtech.in/paynetz/epi/fts
-      .headers({
-        'Content-Type': 'application/x-www-form-urlencoded'
-      })
-      // Legacy Paynetz expects these specific form fields
-      .send(`encdata=${encryptedData}& login=${process.env.ATOM_MERCH_ID}`)
-      .end((response) => {
-        if (response.error || response.status === 500) {
-          console.error("[DEBUG] Gateway Error Body:", response.body);
-          return reject(new Error("Gateway processing failed. Check credentials."));
+    // 2. Payload
+    const payload = {
+      payInstrument: {
+        headDetails: {
+          version: "OTSv1.1",
+          api: "AUTH",
+          platform: "FLASH"
+        },
+        merchDetails: {
+          merchId: env.ATOM_MERCH_ID,
+          userId: env.ATOM_MERCH_ID,
+          password: env.ATOM_MERCH_PASS, 
+          merchTxnId: txnId,
+          merchTxnDate: getFormattedDate()
+        },
+        payDetails: {
+          amount: "1.00", // 👈 Change this to 1.00 for testing
+          product: env.ATOM_PROD_ID,
+          custAccNo: "1234567890",
+          txnCurrency: "INR"
+        },
+        custDetails: {
+          custEmail: userEmail || "test@example.com",
+          custMobile: userMobile || "9999999999"
+        },
+        extras: {
+          udf1: eventName,
+          udf2: userId,
+          udf3: "MES2026",
+          udf4: "",
+          udf5: ""
         }
-        
-        // This endpoint usually returns a string or a token directly
-        resolve(response.body);
-      });
-  });
-};
-
-/**
- * Handle payment callback/response
- */
-export const handlePaymentCallback = async (encryptedResponse) => {
-  try {
-    // Decrypt response
-    const decryptedData = decrypt(encryptedResponse);
-    const responseData = JSON.parse(decryptedData);
-
-    serverLogger.info({ responseData }, "Payment callback received");
-
-    // Extract payment details
-    const merchDetails = responseData.merchDetails;
-    const payDetails = responseData.payDetails;
-    const responseDetails = responseData.responseDetails;
-    const payModeSpecificData = responseData.payModeSpecificData;
-
-    // Verify signature
-    const signatureData = {
-      merchId: merchDetails.merchId,
-      atomTxnId: payDetails.atomTxnId,
-      merchTxnId: merchDetails.merchTxnId,
-      amount: payDetails.amount,
-      subChannel: payModeSpecificData.subChannel[0],
-      bankTxnId: payModeSpecificData.bankDetails.bankTxnId,
+      }
     };
 
-    const isSignatureValid = verifySignature(
-      signatureData,
-      payDetails.signature,
-    );
+    const encryptedData = encryptAtom(payload);
+    
+    const params = new URLSearchParams();
+    params.append('merchId', env.ATOM_MERCH_ID);
+    params.append('encData', encryptedData);
+
+    console.log("🔵 Sending to Atom URL:", env.ATOM_PAYMENT_URL);
+
+    const response = await axios.post(env.ATOM_PAYMENT_URL, params, {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" }
+    });
+
+    // 👇 DEBUGGING LOGS (Check your terminal for this!)
+    console.log("🟡 RAW ATOM RESPONSE STATUS:", response.status);
+    console.log("🟡 RAW ATOM RESPONSE DATA:", response.data); 
 
     const resData = response.data;
     
