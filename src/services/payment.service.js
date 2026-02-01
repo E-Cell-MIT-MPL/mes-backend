@@ -1,24 +1,16 @@
-import unirest from "unirest";
-
+import axios from "axios";
 import { env } from "../utils/envConfig.js";
 import { decrypt, decryptRequest, encrypt, verifySignature } from "./encryption.service.js";
 import Ticket from "../models/Ticket.model.js";
-import User from "../models/User.model.js";
-import { serverLogger } from "../server.js";
+import { encryptAtom, decryptAtom } from "../utils/atomAuth.js";
 
-/**
- * Generate unique transaction ID
- */
-export const generateTxnId = () => {
-  const timestamp = new Date().getTime().toString(36);
-  const random = Math.random().toString(36).substring(2, 7);
-  return `MES${timestamp}${random}`.toUpperCase();
+const getFormattedDate = () => {
+  const d = new Date();
+  const pad = (n) => n.toString().padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 };
 
-/**
- * Initiate payment with ATOM gateway
- */
-export const initiatePayment = async ({ userId, eventName, amount }) => {
+export const initiatePayment = async ({ userId, eventName, amount, userEmail, userMobile }) => {
   try {
     // Get user details
     const user = await User.findById(userId);
@@ -48,7 +40,7 @@ const txnDate = new Intl.DateTimeFormat('en-GB', {
     const ticket = await Ticket.create({
       userId,
       eventName,
-      qrData: JSON.stringify(qrDataObj),
+      qrData: "PENDING",
       txnId,
       amount,
       paymentStatus: "PENDING",
@@ -137,11 +129,6 @@ console.log("==================================");
       paymentUrl: env.ATOM_PAYMENT_URL,
       merchId: env.ATOM_MERCH_ID,
     };
-  } catch (error) {
-    serverLogger.error({ error: error.message }, "Payment initiation error");
-    throw error;
-  }
-};
 
 /**
  * Send authentication request to ATOM
@@ -200,57 +187,41 @@ export const handlePaymentCallback = async (encryptedResponse) => {
       payDetails.signature,
     );
 
-    if (!isSignatureValid) {
-      serverLogger.error(
-        { txnId: merchDetails.merchTxnId },
-        "Signature verification failed",
-      );
-
-      throw new Error("Signature verification failed");
+    const resData = response.data;
+    
+    // Check if response is JSON (Error) or String (Success/Error)
+    if (typeof resData === 'object') {
+         console.error("❌ Atom returned JSON error:", JSON.stringify(resData));
+         throw new Error("Atom returned an error object: " + JSON.stringify(resData));
     }
 
-    // Find ticket
-    const ticket = await Ticket.findOne({ txnId: merchDetails.merchTxnId });
+    const urlParams = new URLSearchParams(resData);
+    const encResponse = urlParams.get('encData');
 
-    if (!ticket) {
-      throw new Error("Ticket not found");
+    if (!encResponse) {
+        // This will now show us exactly what Atom said
+        throw new Error(`Atom response missing encData. Raw response: ${resData}`);
     }
 
-    // Update ticket
-    ticket.atomTxnId = payDetails.atomTxnId;
-    ticket.signature = payDetails.signature;
-    ticket.signatureVerified = isSignatureValid;
-    ticket.statusCode = responseDetails.statusCode;
-    ticket.statusMessage = responseDetails.statusMessage;
-    ticket.paymentMode = payDetails.paymentMode || null;
-    ticket.rawResponse = responseData;
+    const decrypted = decryptAtom(encResponse);
+    console.log("🟢 Decrypted Atom Response:", decrypted);
 
-    // Determine final status
-    if (responseDetails.statusCode === "OTS0000") {
-      ticket.paymentStatus = "SUCCESS";
-    } else if (responseDetails.statusCode === "OTS0001") {
-      ticket.paymentStatus = "FAILED";
+    if (decrypted && decrypted.atomTokenId) {
+        return {
+            atomTokenId: decrypted.atomTokenId,
+            merchId: env.ATOM_MERCH_ID,
+            txnId: txnId
+        };
     } else {
-      ticket.paymentStatus = "CANCELLED";
+        throw new Error("Token generation failed");
     }
 
-    await ticket.save();
-
-    return {
-      success: ticket.paymentStatus === "SUCCESS",
-      txnId: ticket.txnId,
-      ticketId: ticket._id,
-      atomTxnId: ticket.atomTxnId,
-      status: ticket.paymentStatus,
-      amount: ticket.amount,
-      statusMessage: ticket.statusMessage,
-    };
   } catch (error) {
-    serverLogger.error(
-      { error: error.message },
-      "Payment callback handling error",
-    );
-
+    console.error("❌ Payment Error:", error.message);
     throw error;
   }
+};
+
+export const handlePaymentCallback = async (data) => {
+    return { success: true };
 };

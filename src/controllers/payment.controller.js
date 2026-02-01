@@ -27,9 +27,10 @@ export const initiatePayment = async (req, res) => {
       console.warn(`[${requestId}] [VALIDATION_FAILED] Missing eventName or amount`);
       return res.status(400).json({
         success: false,
-        message: "Event name and amount are required",
+        message: error.message || "Payment initiation failed",
       });
     }
+  };
 
     // Call Service Layer
     // This performs: DB Create -> Atom Auth Request -> Token Receipt
@@ -76,63 +77,45 @@ export const handlePaymentCallback = async (req, res) => {
         `${env.FRONTEND_URL}/payment/failure?error=invalid_response`,
       );
     }
+  };
 
-    const result = await handlePaymentCallbackService(encData);
+  /**
+   * GET /payment/status/:ticketId
+   * Get payment status for a ticket
+   */
+  export const getPaymentStatus = async (req, res) => {
+    try {
+      const { ticketId } = req.params;
+      const userId = req.user.userId;
 
-    // Redirect to frontend based on status
-    if (result.success) {
-      return res.redirect(
-        `${env.FRONTEND_URL}/payment/success?ticketId=${result.ticketId}&txnId=${result.txnId}`,
-      );
-    } else {
-      return res.redirect(
-        `${env.FRONTEND_URL}/payment/failure?ticketId=${result.ticketId}&error=${encodeURIComponent(result.statusMessage)}`,
-      );
-    }
-  } catch {
-    return res.redirect(
-      `${env.FRONTEND_URL}/payment/failure?error=processing_failed`,
-    );
-  }
-};
+      const ticket = await Ticket.findOne({ _id: ticketId, userId });
 
-/**
- * GET /payment/status/:ticketId
- * Get payment status for a ticket
- */
-export const getPaymentStatus = async (req, res) => {
-  try {
-    const { ticketId } = req.params;
-    const userId = req.user.userId;
+      if (!ticket) {
+        return res.status(404).json({
+          success: false,
+          message: "Ticket not found",
+        });
+      }
 
-    const ticket = await Ticket.findOne({ _id: ticketId, userId });
-
-    if (!ticket) {
-      return res.status(404).json({
+      return res.json({
+        success: true,
+        data: {
+          ticketId: ticket._id,
+          txnId: ticket.txnId,
+          atomTxnId: ticket.atomTxnId,
+          eventName: ticket.eventName,
+          amount: ticket.amount,
+          paymentStatus: ticket.paymentStatus,
+          paymentMode: ticket.paymentMode,
+          statusMessage: ticket.statusMessage,
+          createdAt: ticket.createdAt,
+          updatedAt: ticket.updatedAt,
+        },
+      });
+    } catch {
+      return res.status(500).json({
         success: false,
-        message: "Ticket not found",
+        message: "Failed to fetch payment status",
       });
     }
-
-    return res.json({
-      success: true,
-      data: {
-        ticketId: ticket._id,
-        txnId: ticket.txnId,
-        atomTxnId: ticket.atomTxnId,
-        eventName: ticket.eventName,
-        amount: ticket.amount,
-        paymentStatus: ticket.paymentStatus,
-        paymentMode: ticket.paymentMode,
-        statusMessage: ticket.statusMessage,
-        createdAt: ticket.createdAt,
-        updatedAt: ticket.updatedAt,
-      },
-    });
-  } catch {
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch payment status",
-    });
-  }
-};
+  };

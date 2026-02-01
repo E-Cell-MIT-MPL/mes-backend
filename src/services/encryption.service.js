@@ -1,5 +1,5 @@
-import crypto from "crypto";
-import { env } from "../utils/envConfig.js";
+import crypto from 'crypto';
+import { env } from '../utils/envConfig.js';
 
 const reqKey = Buffer.from(env.ATOM_REQ_ENC_KEY.substring(0, 16), "utf8");
 const reqIv = Buffer.from(env.ATOM_REQ_SALT.substring(0, 16), "utf8");
@@ -45,7 +45,7 @@ export const decrypt = (text) => {
   }
 };
 
-export const generateSignature = (data) => {
+export const encrypt = (text) => {
   try {
     // 1. Clean the data to prevent "undefined" or "null" appearing in the string
     const merchId = data.merchId?.toString() || "";
@@ -73,7 +73,9 @@ export const generateSignature = (data) => {
       .digest("hex");
       
   } catch (error) {
-    throw new Error(`Signature generation failed: ${error.message}`);
+    console.error("❌ Encryption Service Error:", error.message);
+    // Return null so the controller can send a 400 instead of crashing with 500
+    return null; 
   }
 };
 
