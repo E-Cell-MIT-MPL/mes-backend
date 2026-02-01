@@ -1,60 +1,77 @@
 import crypto from 'crypto';
 import { env } from '../utils/envConfig.js';
 
-const algorithm = 'aes-256-cbc';
+const reqKey = Buffer.from(env.ATOM_REQ_ENC_KEY.substring(0, 16), "utf8");
+const reqIv = Buffer.from(env.ATOM_REQ_SALT.substring(0, 16), "utf8");
+const resKey = Buffer.from(env.ATOM_RES_DEC_KEY.substring(0, 16), "utf8");
+const resIv = Buffer.from(env.ATOM_RES_SALT.substring(0, 16), "utf8");
+const resHashKey = env.ATOM_RES_HASH_KEY; // <-- Make sure this is here!
 
-const getKeyAndIV = () => {
-    const keyStr = env.ATOM_REQ_ENC_KEY;
-    const saltStr = env.ATOM_REQ_SALT;
+const algorithm = "aes-128-cbc"; 
 
-    // 1. Check if keys exist
-    if (!keyStr || !saltStr) {
-        throw new Error(`Missing Keys in .env! ENC_KEY: ${!!keyStr}, SALT: ${!!saltStr}`);
-    }
+export const encrypt = (text) => {
+  try {
+    // Verified: using reqKey and reqIv
+    const cipher = crypto.createCipheriv(algorithm, reqKey, reqIv);
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return encrypted.toUpperCase();
+  } catch (error) {
+    throw new Error(`Encryption failed: ${error.message}`);
+  }
+};
 
-    // 2. Fix IV (Salt)
-    // Atom Salt is usually 32 hex characters = 16 bytes.
-    let iv;
-    if (saltStr.length === 32 && /^[0-9A-Fa-f]+$/.test(saltStr)) {
-        iv = Buffer.from(saltStr, 'hex');
-    } else {
-        // Fallback for non-hex salts (uncommon for Atom but possible)
-        iv = Buffer.from(saltStr, 'utf-8');
-    }
+// ADD THIS NEW FUNCTION BELOW YOUR ENCRYPT FUNCTION
+export const decryptRequest = (text) => {
+  try {
+    // This uses reqKey/reqIv to check the payload YOU just encrypted
+    const decipher = crypto.createDecipheriv(algorithm, reqKey, reqIv);
+    let decrypted = decipher.update(text, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  } catch (error) {
+    return "DECRYPTION_FAILED_CHECK_KEYS";
+  }
+};
 
-    // 3. Fix Key (Prevent the 500 Crash)
-    let key;
-    if (keyStr.length === 32) {
-        // Exact match (Text)
-        key = Buffer.from(keyStr, 'utf-8');
-    } else if (keyStr.length === 64) {
-        // Exact match (Hex)
-        key = Buffer.from(keyStr, 'hex');
-    } else {
-        // ⚠️ KEY IS TOO SHORT (18 chars). 
-        // We hash it to create a valid 32-byte key.
-        // This is mathematically safe and prevents the Node.js crash.
-        console.warn(`⚠️ Stretching Short Key (${keyStr.length} chars) to 32 bytes`);
-        key = crypto.createHash('sha256').update(keyStr, 'utf-8').digest();
-    }
-
-    return { key, iv };
+export const decrypt = (text) => {
+  try {
+    const decipher = crypto.createDecipheriv(algorithm, resKey, resIv);
+    let decrypted = decipher.update(text, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  } catch (error) {
+    throw new Error(`Decryption failed: ${error.message}`);
+  }
 };
 
 export const encrypt = (text) => {
   try {
-    const { key, iv } = getKeyAndIV();
-    
-    // Safety check for IV length (Must be 16 bytes for AES)
-    if (iv.length !== 16) {
-        console.error(`❌ CRITICAL: IV is ${iv.length} bytes. Must be 16.`);
-        return null; 
-    }
+    // 1. Clean the data to prevent "undefined" or "null" appearing in the string
+    const merchId = data.merchId?.toString() || "";
+    const atomTxnId = data.atomTxnId || "";
+    const merchTxnId = data.merchTxnId?.toString() || "";
+    const amount = parseFloat(data.amount).toFixed(2); // Forces "199.00"
+    const subChannel = (Array.isArray(data.subChannel) ? data.subChannel[0] : data.subChannel) || "";
+    const bankTxnId = data.bankTxnId || "";
 
-    const cipher = crypto.createCipheriv(algorithm, key, iv);
-    let encrypted = cipher.update(text, 'utf-8', 'hex');
-    encrypted += cipher.final('hex');
-    return encrypted;
+    // 2. The strict sequence for Atom/NTT Data
+    const signatureString = 
+      merchId + 
+      atomTxnId + 
+      merchTxnId + 
+      amount + 
+      subChannel + 
+      bankTxnId;
+
+    console.log("[DEBUG] Verifying Signature for String:", signatureString);
+
+    // 3. HMAC-SHA512
+    return crypto
+      .createHmac("sha512", resHashKey)
+      .update(signatureString)
+      .digest("hex");
+      
   } catch (error) {
     console.error("❌ Encryption Service Error:", error.message);
     // Return null so the controller can send a 400 instead of crashing with 500
@@ -62,7 +79,17 @@ export const encrypt = (text) => {
   }
 };
 
-export const decrypt = (encText) => {
-    // Placeholder for callback decryption
-    return null;
+export const verifySignature = (data, receivedSignature) => {
+  if (!receivedSignature) return false;
+  
+  const generatedSignature = generateSignature(data);
+  
+  // Use timingSafeEqual to prevent timing attacks (Good practice for Tech Heads!)
+  const a = Buffer.from(generatedSignature);
+  const b = Buffer.from(receivedSignature);
+  
+  const isValid = a.length === b.length && crypto.timingSafeEqual(a, b);
+  
+  console.log(`[DEBUG] Signature Match: ${isValid}`);
+  return isValid;
 };
