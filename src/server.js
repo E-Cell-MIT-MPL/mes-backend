@@ -18,34 +18,40 @@ export const app = express();
 /* -------------------- GLOBAL MIDDLEWARES -------------------- */
 // Add this before your routes to handle preflight globally
 // The {*splat} syntax is the Express 5 way to handle global wildcards
-app.options("{*splat}", cors());// server.js / index.js
+// server.js
 const allowedOrigins = [
   "https://mes26.ecellmit.in",
-  "https://www.mes26.ecellmit.in", // Add the WWW version just in case
+  "https://www.mes26.ecellmit.in",
   "http://localhost:3000"
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps)
       if (!origin) return callback(null, true);
       
-      // Normalize by removing trailing slashes
+      // Remove trailing slashes for comparison
       const normalizedOrigin = origin.replace(/\/$/, "");
-      const normalizedAllowed = allowedOrigins.map(o => o.replace(/\/$/, ""));
+      const isAllowed = allowedOrigins.some(
+        (allowed) => allowed.replace(/\/$/, "") === normalizedOrigin
+      );
 
-      if (normalizedAllowed.includes(normalizedOrigin)) {
+      if (isAllowed) {
         callback(null, true);
       } else {
-        serverLogger.error(`CORS Blocked Origin: ${origin}`);
-        callback(new Error("CORS blocked this origin"));
+        serverLogger.error(`CORS Blocked: ${origin}`);
+        callback(new Error("Not allowed by CORS"));
       }
     },
-    credentials: true,
+    credentials: true, // THIS MUST BE TRUE
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization", "Accept"]
   })
 );
+
+// Express 5 fix for the crash you had earlier
+app.options("{*splat}", cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
