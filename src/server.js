@@ -18,10 +18,25 @@ export const app = express();
 /* -------------------- GLOBAL MIDDLEWARES -------------------- */
 
 // 👇 CORS FIX: Use env.FRONTEND_URL to match your .env file
+// Change this:
+const allowedOrigins = [
+  env.FRONTEND_URL, // Use your imported env object
+  "http://localhost:3000",
+];
+
 app.use(
   cors({
-    origin: env.FRONTEND_URL, // "http://localhost:3000"
-    credentials: true,        // Required for cookies/headers
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"]
   })
@@ -46,6 +61,14 @@ app.use((req, res) => {
     success: false,
     message: "Route not found",
   });
+});
+
+/* -------------------- START SERVER -------------------- */
+// Use Render's dynamic port, fallback to your env config, or 8080
+const port = process.env.PORT || env.PORT || 8080;
+
+app.listen(port, "0.0.0.0", () => {
+  serverLogger.info(`Server (${env.NODE_ENV}) running on port ${port}`);
 });
 
 /* -------------------- ERROR HANDLER -------------------- */

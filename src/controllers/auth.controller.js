@@ -173,15 +173,17 @@ export const login = async (req, res) => {
     });
 
     return res
-      .cookie("jwt", token, {
-        httpOnly: true, // Prevents XSS attacks
-        secure: process.env.NODE_ENV === "production", // HTTPS only in production
-        sameSite: "lax", // CSRF protection
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      })
-      .json({
-        message: "Login successful",
-      });
+  .cookie("jwt", token, {
+    httpOnly: true,
+    // MUST be true for cross-site cookies
+    secure: true, 
+    // MUST be "none" to allow GoDaddy to send cookies to Render
+    sameSite: "none", 
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  })
+  .json({
+    message: "Login successful",
+  });
   } catch (error) {
     serverLogger.error("Login Error", error);
     return res.status(500).json({ message: "Login failed" });
