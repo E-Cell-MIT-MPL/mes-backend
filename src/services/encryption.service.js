@@ -9,6 +9,7 @@ const resHashKey = env.ATOM_RES_HASH_KEY; // <-- Make sure this is here!
 
 const algorithm = "aes-128-cbc"; 
 
+
 // ADD THIS NEW FUNCTION BELOW YOUR ENCRYPT FUNCTION
 export const decryptRequest = (text) => {
   try {

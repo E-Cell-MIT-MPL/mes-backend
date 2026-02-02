@@ -172,16 +172,22 @@ export const login = async (req, res) => {
       userType: user.userType,
     });
 
-    return res
-      .cookie("jwt", token, {
-        httpOnly: true, // Prevents XSS attacks
-        secure: process.env.NODE_ENV === "production", // HTTPS only in production
-        sameSite: "lax", // CSRF protection
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      })
-      .json({
-        message: "Login successful",
-      });
+    // auth.controller.js -> login function
+return res
+.cookie("jwt", token, {
+  httpOnly: true,
+  secure: true,      // Must be true for SameSite=None
+  sameSite: 'none',  // Must be a string "none"
+  path: "/",         // Explicitly set path to root
+  maxAge: 7 * 24 * 60 * 60 * 1000, 
+})
+.json({
+    message: "Login successful",
+    user: { // Pro-tip: Send some user data so the frontend can update state immediately
+      userId: user._id,
+      userType: user.userType
+    }
+  });
   } catch (error) {
     serverLogger.error("Login Error", error);
     return res.status(500).json({ message: "Login failed" });
