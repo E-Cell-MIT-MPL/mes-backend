@@ -14,7 +14,8 @@ import { healthCheckRouter } from "./route/healthCheck.route.js";
 
 export const serverLogger = pino({ name: "server" });
 export const app = express();
-
+// CRITICAL: Tells Express to trust the Render Proxy
+app.set('trust proxy', 1);
 /* -------------------- GLOBAL MIDDLEWARES -------------------- */
 // Add this before your routes to handle preflight globally
 // The {*splat} syntax is the Express 5 way to handle global wildcards
