@@ -43,15 +43,15 @@ export const register = async (req, res) => {
     }
 
     /* -------- DUPLICATE CHECK -------- */
-    const existingUser = await User.findOne({ personalEmail }); 
+    const existingUser = await User.findOne({ personalEmail });
 
     if (existingUser) {
-        if (existingUser.isVerified) {
-            return res.status(409).json({ message: "User already exists" });
-        }
-        await User.deleteOne({ _id: existingUser._id });
+      if (existingUser.isVerified) {
+        return res.status(409).json({ message: "User already exists" });
+      }
+      await User.deleteOne({ _id: existingUser._id });
     }
-// ... Proceed with creating the new user and sending OTP ...
+    // ... Proceed with creating the new user and sending OTP ...
 
     if (existingUser) {
       return res.status(409).json({ message: "User already exists" });
@@ -93,7 +93,7 @@ export const register = async (req, res) => {
           password: hashedPassword,
         },
       },
-      { new: true }
+      { new: true },
     );
 
     return res.status(201).json({
@@ -133,7 +133,10 @@ export const verifyOtp = async (req, res) => {
       });
     } else {
       // For existing users resending OTP
-      await User.findOneAndUpdate({ personalEmail: email }, { isVerified: true });
+      await User.findOneAndUpdate(
+        { personalEmail: email },
+        { isVerified: true },
+      );
     }
 
     await Otp.deleteMany({ email });
@@ -173,21 +176,22 @@ export const login = async (req, res) => {
     });
 
     // auth.controller.js -> login function
-return res
-.cookie("jwt", token, {
-  httpOnly: true,
-  secure: true,      // Must be true for SameSite=None
-  sameSite: 'none',  // Must be a string "none"
-  path: "/",         // Explicitly set path to root
-  maxAge: 7 * 24 * 60 * 60 * 1000, 
-})
-.json({
-    message: "Login successful",
-    user: { // Pro-tip: Send some user data so the frontend can update state immediately
-      userId: user._id,
-      userType: user.userType
-    }
-  });
+    return res
+      .cookie("jwt", token, {
+        httpOnly: true,
+        secure: true, // Must be true for SameSite=None
+        sameSite: process.env.COOKIE_SAME_SITE || "none", // Must be a string "none"
+        path: "/", // Explicitly set path to root
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      })
+      .json({
+        message: "Login successful",
+        user: {
+          // Pro-tip: Send some user data so the frontend can update state immediately
+          userId: user._id,
+          userType: user.userType,
+        },
+      });
   } catch (error) {
     serverLogger.error("Login Error", error);
     return res.status(500).json({ message: "Login failed" });
@@ -316,7 +320,9 @@ export const getMe = async (req, res) => {
     const user = await User.findById(req.user.userId).select("-password");
 
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     // Return exactly what the frontend AuthContext expects
@@ -331,6 +337,8 @@ export const getMe = async (req, res) => {
     });
   } catch (error) {
     serverLogger.error("GET_ME ERROR", error);
-    return res.status(500).json({ success: false, message: "Failed to fetch profile" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch profile" });
   }
 };
