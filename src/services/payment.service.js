@@ -33,7 +33,7 @@ export const initiatePayment = async ({ userId, eventName, amount, userEmail, us
         },
         merchDetails: {
           merchId: env.ATOM_MERCH_ID,
-          userId: env.ATOM_MERCH_ID,
+          userId: "",
           password: env.ATOM_MERCH_PASS, 
           merchTxnId: txnId,
           merchTxnDate: getFormattedDate()
