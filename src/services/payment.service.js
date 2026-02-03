@@ -59,12 +59,14 @@ export const initiatePayment = async ({ userId, eventName, amount, userEmail, us
     };
 
     const encryptedData = encryptAtom(payload);
+    console.log("encrypteddata",encryptedData);
     
     const params = new URLSearchParams();
     params.append('merchId', env.ATOM_MERCH_ID);
     params.append('encData', encryptedData);
 
     console.log("🔵 Sending to Atom URL:", env.ATOM_PAYMENT_URL);
+    console.log(params);
 
     const response = await axios.post(env.ATOM_PAYMENT_URL, params, {
       headers: { "Content-Type": "application/x-www-form-urlencoded" }

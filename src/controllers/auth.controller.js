@@ -179,10 +179,10 @@ export const login = async (req, res) => {
     return res
       .cookie("jwt", token, {
         httpOnly: true,
-        secure: true, // Must be true for SameSite=None
-        sameSite: process.env.COOKIE_SAME_SITE || "none", // Must be a string "none"
+        secure: false, // Must be true for SameSite=None
+        sameSite: process.env.COOKIE_SAME_SITE || "lax", // Must be a string "none"
         path: "/", // Explicitly set path to root
-        domain: '.ecellmit.in',
+      //domain: '.ecellmit.in',-- comment out for production 
         maxAge: 7 * 24 * 60 * 60 * 1000,
       })
       .json({
