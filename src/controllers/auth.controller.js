@@ -110,6 +110,9 @@ export const register = async (req, res) => {
 /* =========================
    VERIFY OTP
 ========================= */
+/* =========================
+   VERIFY OTP (Fixed with Auto-Login)
+========================= */
 export const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -125,23 +128,49 @@ export const verifyOtp = async (req, res) => {
       return res.status(400).json({ message: "OTP expired" });
     }
 
+    let user; // 👈 We need to capture the user object
+
     /* -------- CREATE USER AFTER OTP VERIFICATION -------- */
     if (otpRecord.registrationData) {
-      await User.create({
+      user = await User.create({
         ...otpRecord.registrationData,
         isVerified: true,
       });
     } else {
       // For existing users resending OTP
-      await User.findOneAndUpdate(
+      user = await User.findOneAndUpdate(
         { personalEmail: email },
         { isVerified: true },
+        { new: true } // Ensure we get the updated document
       );
     }
 
     await Otp.deleteMany({ email });
 
-    return res.json({ message: "Email verified successfully" });
+    /* -------- ✅ NEW: AUTO-LOGIN LOGIC (Copied from Login) -------- */
+    const token = signToken({
+      userId: user._id,
+      userType: user.userType,
+    });
+
+    return res
+      .cookie("jwt", token, {
+        httpOnly: true,
+        secure: false, // Set to true if using HTTPS/Production
+        sameSite: process.env.COOKIE_SAME_SITE || "lax",
+        path: "/",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      })
+      .json({
+        message: "Email verified and logged in successfully",
+        success: true, // 👈 Added explicit success flag for Frontend
+        user: {
+          userId: user._id,
+          userType: user.userType,
+          name: user.name,
+        },
+      });
+      
   } catch (error) {
     serverLogger.error("OTP Verification Error", error);
     return res.status(500).json({ message: "OTP verification failed" });
