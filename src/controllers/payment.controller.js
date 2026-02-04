@@ -1,11 +1,11 @@
   import Ticket from "../models/Ticket.model.js";
-  import {
-    handlePaymentCallback as handlePaymentCallbackService,
-    initiatePayment as initiatePaymentService,
-  } from "../services/payment.service.js";
-  import { env } from "../utils/envConfig.js";
-  import { decryptAtom } from "../utils/atomAuth.js"; // 👈 Add this import
-  import { encryptTicketData } from "../utils/qrSecurity.js";
+import {
+  initiatePayment as initiatePaymentService,
+} from "../services/payment.service.js";
+import { env } from "../utils/envConfig.js";
+import { decryptAtom } from "../utils/atomAuth.js";
+import { encryptTicketData } from "../utils/qrSecurity.js";
+import crypto from "crypto";
   /**
    * POST /payment/initiate
    * Initiate payment for ticket purchase
@@ -41,57 +41,142 @@
     }
   };
 
-  /**
-   * POST /payment/callback
-   * Handle payment gateway callback
-   */
+  export const handlePaymentReturn = async (req, res) => {
+    try {
+      const { encData, txnId } = req.body;
+      
+      if (!encData) {
+        return res.status(400).json({
+          success: false,
+          message: "Payment gateway response missing"
+        });
+      }
+
+      try {
+        decryptAtom(encData);
+      } catch (decryptError) {
+        console.error("Return URL decryption failed:", decryptError.message);
+      }
+
+      return res.redirect(`${env.FRONTEND_URL}/payment/success?txnId=${txnId}`);
+    } catch (error) {
+      console.error("Payment return error:", error);
+      return res.redirect(`${env.FRONTEND_URL}/payment/failure`);
+    }
+  };
+
   export const handlePaymentCallback = async (req, res) => {
     try {
-      const { encData } = req.body; 
-      if (!encData) return res.status(400).send("No data received");
-  
-      const decryptedRaw = decryptAtom(encData);
-      const decrypted = decryptedRaw.payInstrument;
-  
-      if (!decrypted || !decrypted.responseDetails) {
-          throw new Error("Invalid decryption or malformed response from Atom");
-      }
-  
-      const { merchTxnId } = decrypted.merchDetails;
-      const { statusCode } = decrypted.responseDetails;
+      const { encData } = req.body;
       
-      // 👇 FIX: Get userId from the UDF2 field we sent earlier
-      const userIdFromAtom = decrypted.extras.udf2; 
-  
+      if (!encData) {
+        console.error("Callback received with no encData");
+        return res.status(400).send("FAILED");
+      }
+
+      const decryptedRaw = decryptAtom(encData);
+      if (!decryptedRaw || !decryptedRaw.payInstrument) {
+        console.error("Decryption failed or invalid structure");
+        return res.status(400).send("FAILED");
+      }
+
+      const payInstrument = decryptedRaw.payInstrument;
+      const { merchDetails, payDetails, responseDetails, payModeSpecificData, extras } = payInstrument;
+
+      if (!merchDetails || !payDetails || !responseDetails) {
+        console.error("Missing required response fields");
+        return res.status(400).send("FAILED");
+      }
+
+      const { merchTxnId } = merchDetails;
+      const { atomTxnId, signature } = payDetails;
+      const { statusCode } = responseDetails;
+      const userIdFromAtom = extras?.udf2;
+
+      if (!merchTxnId || !atomTxnId) {
+        console.error("Missing transaction identifiers");
+        return res.status(400).send("FAILED");
+      }
+
       if (statusCode === "OTS0000") {
-        // Generate the secure QR hash using the ID returned by Atom
-        const encryptedData = encryptTicketData({
-            u: userIdFromAtom,         
-            t: merchTxnId,          
-            e: "MES2026",           
-            v: Date.now()           
+        const totalAmount = parseFloat(payDetails.totalAmount).toFixed(2);
+        const subChannel = Array.isArray(payModeSpecificData?.subChannel)
+          ? payModeSpecificData.subChannel[0]
+          : payModeSpecificData?.subChannel || "";
+        const bankTxnId = payModeSpecificData?.bankDetails?.bankTxnId || "";
+
+        const signatureString = [
+          merchDetails.merchId.toString(),
+          atomTxnId.toString(),
+          merchTxnId.toString(),
+          totalAmount,
+          statusCode.toString(),
+          subChannel.toString(),
+          bankTxnId.toString()
+        ].join("");
+
+        const expectedSignature = crypto
+          .createHmac("sha512", env.ATOM_RES_HASH_KEY)
+          .update(signatureString)
+          .digest("hex");
+
+        if (expectedSignature !== signature) {
+          console.error("Signature verification failed", {
+            expected: expectedSignature,
+            received: signature
+          });
+          return res.status(400).send("FAILED");
+        }
+
+        const encryptedQrData = encryptTicketData({
+          u: userIdFromAtom,
+          t: merchTxnId,
+          e: "MES2026",
+          v: Date.now()
         });
-  
-        await Ticket.findOneAndUpdate(
+
+        const updateResult = await Ticket.findOneAndUpdate(
           { txnId: merchTxnId },
-          { 
-              paymentStatus: "SUCCESS", 
-              qrData: encryptedData, // Save the secure hash
-              atomTxnId: decrypted.payDetails.atomTxnId 
-          }
+          {
+            paymentStatus: "SUCCESS",
+            qrData: encryptedQrData,
+            atomTxnId: atomTxnId,
+            statusCode: statusCode,
+            paymentMode: subChannel,
+            signatureVerified: true
+          },
+          { new: true }
         );
-        
-        return res.redirect(`${env.FRONTEND_URL}/student?status=success`);
+
+        if (!updateResult) {
+          console.error("Ticket not found for update:", merchTxnId);
+          return res.status(404).send("FAILED");
+        }
+
+        console.log("Payment successful and ticket updated:", merchTxnId);
+        return res.send("OK");
       } else {
-        await Ticket.findOneAndUpdate(
+        const updateResult = await Ticket.findOneAndUpdate(
           { txnId: merchTxnId },
-          { paymentStatus: "FAILED" }
+          {
+            paymentStatus: "FAILED",
+            statusCode: statusCode,
+            signatureVerified: false
+          },
+          { new: true }
         );
-        return res.redirect(`${env.FRONTEND_URL}/student?status=failed`);
+
+        if (!updateResult) {
+          console.error("Ticket not found for failure update:", merchTxnId);
+          return res.status(404).send("FAILED");
+        }
+
+        console.log("Payment failed:", statusCode);
+        return res.send("OK");
       }
     } catch (error) {
-      console.error("Callback Error:", error);
-      return res.redirect(`${env.FRONTEND_URL}/student?status=failed`);
+      console.error("Callback processing error:", error.message);
+      return res.status(500).send("FAILED");
     }
   };
 
