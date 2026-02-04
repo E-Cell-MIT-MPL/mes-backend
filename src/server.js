@@ -52,8 +52,8 @@ app.use(
 );
 
 // Express 5 fix for the crash you had earlier
+// Express 5 fix for the crash you had earlier
 app.options("{*splat}", cors());
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

@@ -227,7 +227,28 @@ export const login = async (req, res) => {
     return res.status(500).json({ message: "Login failed" });
   }
 };
+/* =========================
+   LOGOUT
+========================= */
+export const logout = (req, res) => {
+  try {
+    // ⚠️ The options here must match your login() cookie settings EXACTLY
+    res.clearCookie("jwt", {
+      httpOnly: true,
+      secure: false, // Set to true if you updated login to use secure: true
+      sameSite: process.env.COOKIE_SAME_SITE || "lax", 
+      path: "/", 
+    });
 
+    return res.status(200).json({ 
+        success: true, 
+        message: "Logged out successfully" 
+    });
+  } catch (error) {
+    serverLogger.error("Logout Error", error);
+    return res.status(500).json({ message: "Logout failed" });
+  }
+};
 /* =========================
    RESEND OTP
 ========================= */
@@ -344,31 +365,24 @@ export const resetPassword = async (req, res) => {
 /* =========================
    GET CURRENT USER (ME)
 ========================= */
+/* =========================
+   GET CURRENT USER (The Missing Link)
+========================= */
 export const getMe = async (req, res) => {
   try {
-    // req.user.userId is populated by your protect/auth middleware
-    const user = await User.findById(req.user.userId).select("-password");
+    // We can access req.userId because the middleware set it
+    const user = await User.findById(req.userId).select("-password");
 
     if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    // Return exactly what the frontend AuthContext expects
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      data: {
-        name: user.name,
-        regNumber: user.regNumber,
-        personalEmail: user.personalEmail,
-        userType: user.userType,
-      },
+      data: user
     });
   } catch (error) {
-    serverLogger.error("GET_ME ERROR", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch profile" });
+    console.error("GetMe Error:", error.message);
+    res.status(500).json({ success: false, message: "Server error fetching user" });
   }
 };
