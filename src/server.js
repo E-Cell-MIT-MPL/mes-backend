@@ -19,39 +19,42 @@ export const app = express();
 app.set('trust proxy', 1);
 
 /* -------------------- CORS SETUP (The Fix) -------------------- */
+/* -------------------- CORS SETUP (Updated) -------------------- */
 const allowedOrigins = [
   "https://mes26.ecellmit.in",
   "https://www.mes26.ecellmit.in",
   "http://localhost:3000"
 ];
 
-// 1. Define Config ONCE
 const corsOptions = {
   origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
     if (!origin) return callback(null, true);
     
     const normalizedOrigin = origin.replace(/\/$/, "");
-    const isAllowed = allowedOrigins.some(
-      (allowed) => allowed.replace(/\/$/, "") === normalizedOrigin
-    );
 
-    if (isAllowed) {
+    // 1. Check against the specific list (Production & Localhost)
+    const isAllowedList = allowedOrigins.includes(normalizedOrigin);
+
+    // 2. Allow ALL Vercel Preview URLs (Dynamic)
+    const isVercel = normalizedOrigin.endsWith(".vercel.app");
+
+    if (isAllowedList || isVercel) {
       callback(null, true);
     } else {
       serverLogger.error(`CORS Blocked: ${origin}`);
       callback(new Error("Not allowed by CORS"));
     }
   },
-  credentials: true, // 👈 CRITICAL: Must be true for Cookies
+  credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "Accept"]
 };
 
-// 2. Apply to Main Requests
+// Apply to Main Requests
 app.use(cors(corsOptions));
 
-// 3. Apply to Preflight (OPTIONS) - USING THE SAME CONFIG
-// The regex /.*/ ensures it matches all routes without crashing Express 5
+// Apply to Preflight
 app.options(/.*/, cors(corsOptions));
 
 /* -------------------- MIDDLEWARE -------------------- */
