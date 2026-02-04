@@ -13,7 +13,7 @@ import crypto from "crypto";
   export const initiatePayment = async (req, res) => {
     try {
       const { eventName, amount } = req.body;
-      const userId = req.user.userId;
+      const userId = req.userId;
 
       if (!eventName || !amount) {
         return res.status(400).json({
