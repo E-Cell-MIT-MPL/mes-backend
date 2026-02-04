@@ -235,7 +235,7 @@ export const logout = (req, res) => {
     // ⚠️ The options here must match your login() cookie settings EXACTLY
     res.clearCookie("jwt", {
       httpOnly: true,
-      secure: false, // Set to true if you updated login to use secure: true
+      secure: true, // Set to true if you updated login to use secure: true
       sameSite: process.env.COOKIE_SAME_SITE || "lax", 
       path: "/", 
     });
