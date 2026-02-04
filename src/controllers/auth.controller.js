@@ -233,12 +233,7 @@ export const login = async (req, res) => {
 export const logout = (req, res) => {
   try {
     // ⚠️ The options here must match your login() cookie settings EXACTLY
-    res.clearCookie("jwt", {
-      httpOnly: true,
-      secure: true, // Set to true if you updated login to use secure: true
-      sameSite: process.env.COOKIE_SAME_SITE || "lax", 
-      path: "/", 
-    });
+    res.clearCookie("jwt");
 
     return res.status(200).json({ 
         success: true, 
