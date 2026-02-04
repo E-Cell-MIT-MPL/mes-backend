@@ -232,8 +232,13 @@ export const login = async (req, res) => {
 ========================= */
 export const logout = (req, res) => {
   try {
-    // ⚠️ The options here must match your login() cookie settings EXACTLY
-    res.clearCookie("jwt");
+    res.clearCookie("jwt", {
+        httpOnly: true,
+        secure: true,
+        sameSite: process.env.COOKIE_SAME_SITE || "none",
+        path: "/",
+        domain: '.ecellmit.in' ,
+      });
 
     return res.status(200).json({ 
         success: true, 
