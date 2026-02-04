@@ -39,7 +39,7 @@ export const initiatePayment = async ({ userId, eventName, amount, userEmail, us
           merchTxnDate: getFormattedDate()
         },
         payDetails: {
-          amount: "13", // 👈 Change this to 1.00 for testing
+          amount: "1.00", // 👈 Change this to 1.00 for testing
           product: env.ATOM_PROD_ID,
           custAccNo: "1234567890",
           txnCurrency: "INR"
