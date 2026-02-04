@@ -28,7 +28,7 @@ router.post("/resend-otp", resendOtp);
 router.post("/login", login);
 
 // 👇 DEBUG LOG 2: Runs when you click the button
-router.post("/logout", (req, res, next) => {
+router.get("/logout", (req, res, next) => {
     console.log("   🚀 [DEBUG] /logout route hit!");
     logout(req, res, next);
 });
