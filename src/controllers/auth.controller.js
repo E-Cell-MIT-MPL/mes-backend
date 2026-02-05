@@ -382,7 +382,7 @@ export const getMe = async (req, res) => {
       data: user
     });
   } catch (error) {
-    console.error("GetMe Error:", error.message);
+    serverLogger.error("GetMe Error:", error.message);
     res.status(500).json({ success: false, message: "Server error fetching user" });
   }
 };

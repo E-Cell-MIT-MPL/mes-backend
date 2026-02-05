@@ -1,7 +1,9 @@
 import express from "express";
 import { v4 as uuidv4 } from "uuid"; 
+
 import { requireAuth } from "../middleware/auth.middleware.js";
 import Ticket from "../models/Ticket.model.js";
+import { serverLogger } from "../server.js";
 
 const router = express.Router();
 
@@ -51,7 +53,7 @@ router.get("/generate", requireAuth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Ticket Gen Error:", error);
+    serverLogger.error("Ticket Gen Error:", error);
     res.status(500).json({ success: false, message: "Server error generating ticket" });
   }
 });
@@ -61,7 +63,8 @@ router.get("/my-tickets", requireAuth, async (req, res) => {
   try {
     const tickets = await Ticket.find({ userId: req.userId }).sort({ createdAt: -1 });
     res.json({ success: true, data: tickets });
-  } catch {
+  } catch (error) {
+    serverLogger.error("Fetch Tickets Error:", error);
     res.status(500).json({ success: false, message: "Could not fetch tickets" });
   }
 });

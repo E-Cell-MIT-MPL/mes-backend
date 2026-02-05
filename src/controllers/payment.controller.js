@@ -6,6 +6,7 @@ import { env } from "../utils/envConfig.js";
 import { decryptAtom } from "../utils/atomAuth.js";
 import { encryptTicketData } from "../utils/qrSecurity.js";
 import crypto from "crypto";
+import { serverLogger } from "../server.js";
   /**
    * POST /payment/initiate
    * Initiate payment for ticket purchase
@@ -103,9 +104,7 @@ import crypto from "crypto";
 export const atomRedirectHandler = async (req, res) => {
   try {
     console.log("=== ATOM REDIRECT HANDLER ===");
-    console.log("Full URL:", req.originalUrl);
-    console.log("Query params:", req.query);
-    
+    console.log("Full URL:", req.originalUrl);    
     // Check ALL possible parameter names Atom might use
     console.log("All query keys:", Object.keys(req.query));
     
@@ -151,8 +150,8 @@ export const atomRedirectHandler = async (req, res) => {
     }
     
   } catch (error) {
-    console.error("Redirect error:", error.message);
-    console.error("Error stack:", error.stack);
+    serverLogger.error("Redirect error:", error.message);
+    serverLogger.error("Error stack:", error.stack);
     return res.redirect(`${env.FRONTEND_URL}/payment/failure?error=server`);
   }
 };
@@ -278,7 +277,7 @@ export const atomRedirectHandler = async (req, res) => {
         return res.send("OK");
       }
     } catch (error) {
-      console.error("Callback processing error:", error.message);
+      serverLogger.error("Callback processing error:", error.message);
       return res.status(500).send("FAILED");
     }
   };
@@ -316,7 +315,8 @@ export const atomRedirectHandler = async (req, res) => {
           updatedAt: ticket.updatedAt,
         },
       });
-    } catch {
+    } catch (error) {
+      serverLogger.error("Get Payment Status Error:", error.message);
       return res.status(500).json({
         success: false,
         message: "Failed to fetch payment status",
