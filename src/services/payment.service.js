@@ -50,6 +50,9 @@ export const initiatePayment = async ({
           custAccNo: "1234567890",
           txnCurrency: "INR",
         },
+        payModeSpecificData: {
+          subChannel: "PP",
+        },
         custDetails: {
           custEmail: userEmail || "test@example.com",
           custMobile: userMobile || "9999999999",
