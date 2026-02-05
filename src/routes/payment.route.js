@@ -6,6 +6,7 @@ import {
   handlePaymentCallback,
   handlePaymentReturn,
   getPaymentStatus,
+ atomRedirectHandler
 } from "../controllers/payment.controller.js";
 
 const router = Router();
