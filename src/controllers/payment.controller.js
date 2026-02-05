@@ -65,6 +65,38 @@ import crypto from "crypto";
     }
   };
 
+
+// added redirect handles for fixing the redirect  succsess pages
+
+export const atomRedirectHandler = async (req, res) => {
+  try {
+    // Get transaction ID from Atom's query params
+    const txnId = req.query.txnid || req.query.txnId || req.query.mer_txn;
+    
+    if (!txnId) {
+      // No transaction ID, redirect to generic failure
+      return res.redirect(`${env.FRONTEND_URL}/payment/failure`);
+    }
+ 
+    // Find the ticket to get its database ID
+    const ticket = await Ticket.findOne({ txnId });
+    
+    if (!ticket) {
+      // Ticket not found
+      return res.redirect(`${env.FRONTEND_URL}/payment/failure`);
+    }
+ 
+    // Redirect to frontend with the ticket's database ID
+    return res.redirect(
+      `${env.FRONTEND_URL}/payment/success?ticketId=${ticket._id}`
+    );
+    
+  } catch (error) {
+    console.error("Redirect error:", error);
+    return res.redirect(`${env.FRONTEND_URL}/payment/failure`);
+  }
+};
+ 
   export const handlePaymentCallback = async (req, res) => {
     try {
       const { encData } = req.body;
