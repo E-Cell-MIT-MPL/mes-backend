@@ -290,7 +290,7 @@ export const atomRedirectHandler = async (req, res) => {
   export const getPaymentStatus = async (req, res) => {
     try {
       const { ticketId } = req.params;
-      const userId = req.user.userId;
+      const userId = req.userId;
 
       const ticket = await Ticket.findOne({ _id: ticketId, userId });
 
