@@ -16,7 +16,7 @@ const EVENT_CONFIG = {
 // Frontend just calls: /tickets/generate
 router.get("/generate", requireAuth, async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.userId;
 
     // A. Check if they already have it
     const existingTicket = await Ticket.findOne({ userId, eventName: EVENT_CONFIG.name });
