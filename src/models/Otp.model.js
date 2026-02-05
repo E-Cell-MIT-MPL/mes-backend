@@ -13,7 +13,7 @@ const otpSchema = new mongoose.Schema({
     personalEmail: String,
     phone: String,
     password: { type: String },
-  }
+  },
 });
 
 otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });

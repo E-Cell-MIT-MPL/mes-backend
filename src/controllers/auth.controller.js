@@ -141,7 +141,7 @@ export const verifyOtp = async (req, res) => {
       user = await User.findOneAndUpdate(
         { personalEmail: email },
         { isVerified: true },
-        { new: true } // Ensure we get the updated document
+        { new: true }, // Ensure we get the updated document
       );
     }
 
@@ -170,7 +170,6 @@ export const verifyOtp = async (req, res) => {
           name: user.name,
         },
       });
-      
   } catch (error) {
     serverLogger.error("OTP Verification Error", error);
     return res.status(500).json({ message: "OTP verification failed" });
@@ -211,7 +210,7 @@ export const login = async (req, res) => {
         secure: true, // Must be true for SameSite=None
         sameSite: process.env.COOKIE_SAME_SITE || "none", // Must be a string "none"
         path: "/", // Explicitly set path to root
-        domain: '.ecellmit.in' ,
+        domain: ".ecellmit.in",
         maxAge: 7 * 24 * 60 * 60 * 1000,
       })
       .json({
@@ -233,16 +232,16 @@ export const login = async (req, res) => {
 export const logout = (req, res) => {
   try {
     res.clearCookie("jwt", {
-        httpOnly: true,
-        secure: true,
-        sameSite: process.env.COOKIE_SAME_SITE || "none",
-        path: "/",
-        domain: '.ecellmit.in' ,
-      });
+      httpOnly: true,
+      secure: true,
+      sameSite: process.env.COOKIE_SAME_SITE || "none",
+      path: "/",
+      domain: ".ecellmit.in",
+    });
 
-    return res.status(200).json({ 
-        success: true, 
-        message: "Logged out successfully" 
+    return res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
     });
   } catch (error) {
     serverLogger.error("Logout Error", error);
@@ -374,15 +373,19 @@ export const getMe = async (req, res) => {
     const user = await User.findById(req.userId).select("-password");
 
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     res.status(200).json({
       success: true,
-      data: user
+      data: user,
     });
   } catch (error) {
     serverLogger.error("GetMe Error:", error.message);
-    res.status(500).json({ success: false, message: "Server error fetching user" });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error fetching user" });
   }
 };

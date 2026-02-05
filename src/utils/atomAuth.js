@@ -13,7 +13,7 @@ export const encryptAtom = (data) => {
 
     const derivedKey = crypto.pbkdf2Sync(password, salt, 65536, 32, "sha512");
     const cipher = crypto.createCipheriv(algorithm, derivedKey, iv);
-    
+
     let encrypted = cipher.update(text);
     encrypted = Buffer.concat([encrypted, cipher.final()]);
     return encrypted.toString("hex");
@@ -25,7 +25,7 @@ export const encryptAtom = (data) => {
 
 export const decryptAtom = (text) => {
   console.log("\n--- 🔍 STARTING DECRYPTION DEBUG ---");
-  
+
   try {
     // 1. Check Input
     if (!text) throw new Error("Input text is empty/null");
@@ -46,7 +46,9 @@ export const decryptAtom = (text) => {
     console.log(`   - Raw Length: ${rawKey.length}`);
     console.log(`   - Trimmed Length: ${keyTrimmed.length}`);
     if (rawKey.length !== keyTrimmed.length) {
-      console.error("   🚨 WARNING: Your ATOM_RES_DEC_KEY has hidden spaces! Check Render/Env.");
+      console.error(
+        "   🚨 WARNING: Your ATOM_RES_DEC_KEY has hidden spaces! Check Render/Env.",
+      );
     } else {
       console.log("   ✅ Key has no hidden spaces.");
     }
@@ -55,7 +57,9 @@ export const decryptAtom = (text) => {
     console.log(`   - Raw Length: ${rawSalt.length}`);
     console.log(`   - Trimmed Length: ${saltTrimmed.length}`);
     if (rawSalt.length !== saltTrimmed.length) {
-      console.error("   🚨 WARNING: Your ATOM_RES_SALT has hidden spaces! Check Render/Env.");
+      console.error(
+        "   🚨 WARNING: Your ATOM_RES_SALT has hidden spaces! Check Render/Env.",
+      );
     } else {
       console.log("   ✅ Salt has no hidden spaces.");
     }
@@ -69,36 +73,41 @@ export const decryptAtom = (text) => {
     // 5. Generate Derived Key (PBKDF2)
     console.log("5. Generating PBKDF2 Derived Key...");
     const derivedKey = crypto.pbkdf2Sync(password, salt, 65536, 32, "sha512");
-    console.log("   ✅ Derived Key Generated (Length: " + derivedKey.length + ")");
+    console.log(
+      "   ✅ Derived Key Generated (Length: " + derivedKey.length + ")",
+    );
 
     // 6. Create Decipher
     console.log("6. Creating Decipher (aes-256-cbc)...");
     const decipher = crypto.createDecipheriv(algorithm, derivedKey, iv);
-    
+
     // 7. Update
     console.log("7. Decrypting content...");
     let decrypted = decipher.update(encryptedText);
-    
+
     // 8. Finalize (THIS IS USUALLY WHERE "BAD DECRYPT" HAPPENS)
     console.log("8. Finalizing decryption block...");
     decrypted = Buffer.concat([decrypted, decipher.final()]);
-    
+
     console.log("   ✅ SUCCESS: Decryption complete.");
     console.log("--- 🏁 END DEBUG ---\n");
-    
-    return JSON.parse(decrypted.toString());
 
+    return JSON.parse(decrypted.toString());
   } catch (e) {
     console.error("\n❌ DECRYPTION CRASHED AT A SPECIFIC STEP:");
     console.error(`   Error Message: ${e.message}`);
-    
+
     if (e.message.includes("bad decrypt")) {
-      console.error("   👉 DIAGNOSIS: The Key or Salt is 100% WRONG for this data.");
+      console.error(
+        "   👉 DIAGNOSIS: The Key or Salt is 100% WRONG for this data.",
+      );
       console.error("      (The lock turned, but the door didn't open.)");
     } else if (e.message.includes("wrong final block length")) {
-       console.error("   👉 DIAGNOSIS: The encrypted text is corrupted or cut off.");
+      console.error(
+        "   👉 DIAGNOSIS: The encrypted text is corrupted or cut off.",
+      );
     }
-    
+
     console.log("--- 💀 DEBUG DIED ---\n");
     return null;
   }

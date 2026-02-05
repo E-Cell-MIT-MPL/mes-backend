@@ -1,5 +1,5 @@
 import express from "express";
-import { requireAuth } from "../middleware/auth.middleware.js"; 
+import { requireAuth } from "../middleware/auth.middleware.js";
 import {
   register,
   verifyOtp,
@@ -19,7 +19,7 @@ router.post("/resend-otp", resendOtp);
 router.post("/login", login);
 router.get("/logout", logout);
 
-router.get("/me", requireAuth, getMe); 
+router.get("/me", requireAuth, getMe);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 

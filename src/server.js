@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { pino } from "pino";
-import { env } from "./utils/envConfig.js"; 
+import { env } from "./utils/envConfig.js";
 
 import httpLogger from "./middleware/requestLogger.js";
 import errorHandler from "./middleware/errorHandler.js";
@@ -17,23 +17,23 @@ export const serverLogger = pino({ name: "server" });
 export const app = express();
 
 // ✅ CRITICAL: Tells Express to trust the Render Proxy
-app.set('trust proxy', 1);
+app.set("trust proxy", 1);
 
 /* -------------------- CORS SETUP (The Fix) -------------------- */
 /* -------------------- CORS SETUP (Updated) -------------------- */
 const allowedOrigins = [
   "https://mes26.ecellmit.in",
   "https://www.mes26.ecellmit.in",
-  "https://psa.atomtech.in",// added new origin that is needed for redirect transaction
-  
-  "http://localhost:3000"
+  "https://psa.atomtech.in", // added new origin that is needed for redirect transaction
+
+  "http://localhost:3000",
 ];
 
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl)
     if (!origin) return callback(null, true);
-    
+
     const normalizedOrigin = origin.replace(/\/$/, "");
 
     // 1. Check against the specific list (Production & Localhost)
@@ -51,7 +51,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "Accept"]
+  allowedHeaders: ["Content-Type", "Authorization", "Accept"],
 };
 
 // Apply to Main Requests

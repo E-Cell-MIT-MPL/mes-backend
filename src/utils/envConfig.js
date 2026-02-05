@@ -2,7 +2,9 @@ import "dotenv/config";
 import { z } from "zod";
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  NODE_ENV: z
+    .enum(["development", "production", "test"])
+    .default("development"),
   HOST: z.string().min(1).default("localhost"),
   PORT: z.coerce.number().int().positive().default(8080),
   CORS_ORIGIN: z.string().default("http://localhost:8080"), // Changed to string to allow matching
@@ -24,7 +26,7 @@ const envSchema = z.object({
   ATOM_PROD_ID: z.string().min(1),
   ATOM_AUTH_URL: z.string().url(),
   ATOM_PAYMENT_URL: z.string().url(),
-  
+
   ATOM_REQ_HASH_KEY: z.string().min(1),
   ATOM_REQ_SALT: z.string().min(1),
   ATOM_REQ_ENC_KEY: z.string().min(1),
@@ -39,7 +41,7 @@ const parsedEnv = envSchema.safeParse(process.env);
 if (!parsedEnv.success) {
   console.error(
     "❌ Invalid environment variables:",
-    JSON.stringify(parsedEnv.error.format(), null, 2)
+    JSON.stringify(parsedEnv.error.format(), null, 2),
   );
   throw new Error("Invalid environment variables");
 }

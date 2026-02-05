@@ -16,7 +16,7 @@ export const scanTicket = async (req, res) => {
 
     // Decrypt QR data
     const decryptedData = decryptTicketData(encryptedQR);
-    
+
     if (!decryptedData) {
       return res.status(400).json({
         success: false,

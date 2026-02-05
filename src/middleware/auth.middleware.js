@@ -4,7 +4,9 @@ export const requireAuth = (req, res, next) => {
   const token = req.cookies.jwt;
 
   if (!token) {
-    return res.status(401).json({ success: false, message: "No token provided" });
+    return res
+      .status(401)
+      .json({ success: false, message: "No token provided" });
   }
 
   try {
@@ -13,6 +15,8 @@ export const requireAuth = (req, res, next) => {
     req.userType = decoded.userType;
     next(); // Pass control to the controller
   } catch (err) {
-    return res.status(401).json({ success: false, message: "Invalid or expired token" });
+    return res
+      .status(401)
+      .json({ success: false, message: "Invalid or expired token" });
   }
 };

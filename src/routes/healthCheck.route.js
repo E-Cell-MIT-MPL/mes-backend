@@ -7,6 +7,6 @@ healthCheckRouter.get("/", (req, res) => {
     success: true,
     message: "Server is healthy and running smoothly 🚀",
     uptime: process.uptime(),
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });

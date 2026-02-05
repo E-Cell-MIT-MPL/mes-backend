@@ -6,14 +6,14 @@ import {
   handlePaymentCallback,
   handlePaymentReturn,
   getPaymentStatus,
- atomRedirectHandler
+  atomRedirectHandler,
 } from "../controllers/payment.controller.js";
 
 const router = Router();
 
 router.post("/initiate", requireAuth, initiatePayment);
 router.post("/return", handlePaymentReturn);
-router.all("/atom/redirect", atomRedirectHandler); 
+router.all("/atom/redirect", atomRedirectHandler);
 router.post("/callback", handlePaymentCallback);
 router.get("/status/:ticketId", requireAuth, getPaymentStatus);
 
