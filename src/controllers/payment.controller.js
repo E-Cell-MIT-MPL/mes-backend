@@ -80,6 +80,7 @@ export const atomRedirectHandler = async (req, res) => {
  
     // Find the ticket to get its database ID
     const ticket = await Ticket.findOne({ txnId });
+    console.log(ticket);
     
     if (!ticket) {
       // Ticket not found
@@ -88,6 +89,7 @@ export const atomRedirectHandler = async (req, res) => {
  
     // Redirect to frontend with the ticket's database ID
     return res.redirect(
+      console.log(ticket._id);
       `${env.FRONTEND_URL}/payment/success?ticketId=${ticket._id}`
     );
     
