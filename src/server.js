@@ -24,6 +24,8 @@ app.set('trust proxy', 1);
 const allowedOrigins = [
   "https://mes26.ecellmit.in",
   "https://www.mes26.ecellmit.in",
+  "https://psa.atomtech.in",// added new origin that is needed for redirect transaction
+  
   "http://localhost:3000"
 ];
 
