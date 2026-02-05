@@ -1,9 +1,9 @@
 import { Router } from "express";
 
 import Ticket from "../models/Ticket.model.js";
-import { decryptAtom } from "../utils/atomAuth";
-import { env } from "../utils/envConfig";
-import { encryptTicketData } from "../utils/qrSecurity";
+import { decryptAtom } from "../utils/atomAuth.js";
+import { env } from "../utils/envConfig.js";
+import { encryptTicketData } from "../utils/qrSecurity.js";
 
 const router = Router();
 
