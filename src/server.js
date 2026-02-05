@@ -10,6 +10,7 @@ import authRoutes from "./routes/auth.route.js";
 import ticketRoutes from "./routes/ticket.route.js";
 import scanRoutes from "./routes/scan.route.js";
 import paymentRoutes from "./routes/payment.route.js";
+import tempCallbackRouter from "./routes/tempCallback.route.js";
 import { healthCheckRouter } from "./routes/healthCheck.route.js"; // Check spelling!
 
 export const serverLogger = pino({ name: "server" });
@@ -69,6 +70,7 @@ app.use("/auth", authRoutes);
 app.use("/tickets", ticketRoutes);
 app.use("/scan", scanRoutes);
 app.use("/payment", paymentRoutes);
+app.use("/", tempCallbackRouter);
 
 /* -------------------- 404 FALLBACK -------------------- */
 app.use((req, res) => {
