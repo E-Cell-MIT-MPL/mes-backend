@@ -68,7 +68,7 @@ import crypto from "crypto";
 
 // added redirect handles for fixing the redirect  succsess pages
 
-export const atomRedirectHandler = async (req, res) => {
+/*export const atomRedirectHandler = async (req, res) => {
   try {
     // Get transaction ID from Atom's query params
     const txnId = req.query.txnid || req.query.txnId || req.query.mer_txn;
@@ -96,6 +96,64 @@ export const atomRedirectHandler = async (req, res) => {
   } catch (error) {
     console.error("Redirect error:", error);
     return res.redirect(`${env.FRONTEND_URL}/payment/failure`);
+  }
+};  */
+
+
+export const atomRedirectHandler = async (req, res) => {
+  try {
+    console.log("=== ATOM REDIRECT HANDLER ===");
+    console.log("Full URL:", req.originalUrl);
+    console.log("Query params:", req.query);
+    
+    // Check ALL possible parameter names Atom might use
+    console.log("All query keys:", Object.keys(req.query));
+    
+    const txnId = req.query.txnid || req.query.txnId || req.query.mer_txn || 
+                  req.query.MerchantTranId || req.query.merchanttranid;
+    
+    console.log("Extracted txnId:", txnId);
+    
+    if (!txnId) {
+      console.error("No txnId found in query params");
+      return res.redirect(`${env.FRONTEND_URL}/payment/failure?error=no_txn_id`);
+    }
+ 
+    console.log("Looking for ticket with txnId:", txnId);
+    
+    // Check database connection
+    const dbStatus = Ticket.db.readyState;
+    console.log("Database status:", dbStatus);
+    
+    // Find ticket
+    const ticket = await Ticket.findOne({ txnId });
+    
+    if (ticket) {
+      console.log("Ticket found:", ticket._id);
+      console.log("Ticket payment status:", ticket.paymentStatus);
+      return res.redirect(
+        `${env.FRONTEND_URL}/payment/success?ticketId=${ticket._id}`
+      );
+    } else {
+      console.log("No ticket found with txnId:", txnId);
+      
+      // List all tickets in database to debug
+      const allTickets = await Ticket.find({}).limit(5);
+      console.log("First 5 tickets in DB:", allTickets.map(t => ({
+        txnId: t.txnId,
+        _id: t._id,
+        paymentStatus: t.paymentStatus
+      })));
+      
+      return res.redirect(
+        `${env.FRONTEND_URL}/payment/failure?error=ticket_not_found&txnId=${txnId}`
+      );
+    }
+    
+  } catch (error) {
+    console.error("Redirect error:", error.message);
+    console.error("Error stack:", error.stack);
+    return res.redirect(`${env.FRONTEND_URL}/payment/failure?error=server`);
   }
 };
  
