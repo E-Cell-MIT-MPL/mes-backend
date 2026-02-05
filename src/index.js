@@ -7,7 +7,9 @@ import { env } from "./utils/envConfig.js";
   if (mongoose.connection.readyState >= 1) return;
 
   try {
-    await mongoose.connect(env.MONGODB_URL);
+    await mongoose.connect(env.MONGODB_URL, {
+      dbName: env.isTest ? "test" : "prod",
+    });
     serverLogger.info("Connected to MongoDB");
   } catch (error) {
     serverLogger.error(error, "MongoDB connection error");
