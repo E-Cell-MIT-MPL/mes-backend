@@ -12,6 +12,7 @@ const router = Router();
 
 router.post("/initiate", requireAuth, initiatePayment);
 router.post("/return", handlePaymentReturn);
+router.get("/atom/redirect", atomRedirectHandler); 
 router.post("/callback", handlePaymentCallback);
 router.get("/status/:ticketId", requireAuth, getPaymentStatus);
 
