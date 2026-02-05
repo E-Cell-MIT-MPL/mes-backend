@@ -59,7 +59,7 @@ router.get("/generate", requireAuth, async (req, res) => {
 // 2. GET MY TICKETS
 router.get("/my-tickets", requireAuth, async (req, res) => {
   try {
-    const tickets = await Ticket.find({ userId: req.user.userId }).sort({ createdAt: -1 });
+    const tickets = await Ticket.find({ userId: req.userId }).sort({ createdAt: -1 });
     res.json({ success: true, data: tickets });
   } catch {
     res.status(500).json({ success: false, message: "Could not fetch tickets" });
