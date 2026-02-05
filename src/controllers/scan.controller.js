@@ -1,23 +1,42 @@
 import Ticket from "../models/Ticket.model.js";
-import { verifyQR } from "../config/qr.js";
+import { decryptTicketData } from "../utils/qrSecurity.js";
 import { serverLogger } from "../server.js";
 
 export const scanTicket = async (req, res) => {
   try {
-    const qrPayload = req.body;
+    // Expected body: { encryptedQR: "iv:encrypted_data" }
+    const { encryptedQR } = req.body;
 
-    // Verify QR authenticity
-    if (!verifyQR(qrPayload)) {
+    if (!encryptedQR) {
+      return res.status(400).json({
+        success: false,
+        message: "QR data missing",
+      });
+    }
+
+    // Decrypt QR data
+    const decryptedData = decryptTicketData(encryptedQR);
+    
+    if (!decryptedData) {
       return res.status(400).json({
         success: false,
         message: "Invalid or tampered QR",
       });
     }
 
-    const { ticketId } = qrPayload;
+    // Extract ticket info from decrypted payload
+    // Payload structure: { u: userId, t: txnId, e: eventCode, v: timestamp }
+    const { t: txnId } = decryptedData;
 
-    // Fetch ticket
-    const ticket = await Ticket.findById(ticketId).populate("userId");
+    if (!txnId) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid QR payload",
+      });
+    }
+
+    // Fetch ticket by transaction ID
+    const ticket = await Ticket.findOne({ txnId }).populate("userId");
 
     if (!ticket) {
       return res.status(404).json({
