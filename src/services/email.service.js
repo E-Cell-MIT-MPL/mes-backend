@@ -49,16 +49,17 @@ export const sendOtpEmail = async (to, otp) => {
 
 import * as Brevo from "@getbrevo/brevo";
 
-const client = Brevo.ApiClient.instance;
-
-// ✅ correct auth key
-client.authentications["api-key"].apiKey = env.BREVO_API_KEY;
-
 const emailApi = new Brevo.TransactionalEmailsApi();
+
+// 🔐 set API key directly (NO ApiClient.instance)
+emailApi.setApiKey(
+  Brevo.TransactionalEmailsApiApiKeys.apiKey,
+  env.BREVO_API_KEY
+);
 
 export const sendOtpEmail = async (to, otp) => {
   try {
-    const sendSmtpEmail = {
+    const email = {
       sender: {
         name: "E-Cell",
         email: env.EMAIL_FROM,
@@ -68,7 +69,7 @@ export const sendOtpEmail = async (to, otp) => {
       htmlContent: `<h2>Your OTP</h2><p>${otp}</p>`,
     };
 
-    return await emailApi.sendTransacEmail(sendSmtpEmail);
+    return await emailApi.sendTransacEmail(email);
   } catch (err) {
     console.error(err?.response?.body || err);
     throw err;
