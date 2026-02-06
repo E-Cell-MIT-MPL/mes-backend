@@ -2,7 +2,7 @@ import { Resend } from "resend";
 import { serverLogger } from "../server.js";
 import { env } from "../utils/envConfig.js";
 
-// Initialize Resend with your API Key (starts with re_)
+
 
 
 
@@ -40,29 +40,27 @@ export const sendOtpEmail = async (to, otp) => {
     serverLogger.error("❌ Failed to send OTP:", err);
     throw err;
   }
-};
-
-
-*/
+};  */
 
 
 
-import * as Brevo from "@getbrevo/brevo";
+
+
+
+import Brevo from "@getbrevo/brevo";
 
 const emailApi = new Brevo.TransactionalEmailsApi();
 
-// 🔐 set API key directly (NO ApiClient.instance)
-emailApi.setApiKey(
-  Brevo.TransactionalEmailsApiApiKeys.apiKey,
-  env.BREVO_API_KEY
-);
+// attach api key like this
+emailApi.apiClient.authentications["api-key"].apiKey =
+  process.env.BREVO_API_KEY;
 
 export const sendOtpEmail = async (to, otp) => {
   try {
     const email = {
       sender: {
         name: "E-Cell",
-        email: env.EMAIL_FROM,
+        email: process.env.EMAIL_FROM, // must be verified sender
       },
       to: [{ email: to }],
       subject: "Your OTP for verification for MES 2026",
