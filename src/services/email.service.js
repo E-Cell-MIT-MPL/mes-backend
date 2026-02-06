@@ -49,11 +49,14 @@ export const sendOtpEmail = async (to, otp) => {
 
 import Brevo from "@getbrevo/brevo";
 
-// Configure Brevo client
-const apiInstance = new Brevo.TransactionalEmailsApi();
+// Create global API client
+const client = Brevo.ApiClient.instance;
 
-const apiKeyAuth = apiInstance.apiClient.authentications["apiKey"];
-apiKeyAuth.apiKey = env.BREVO_API_KEY;
+// Set API key (THIS is the correct way)
+client.authentications["apiKey"].apiKey = env.BREVO_API_KEY;
+
+// Create API instance
+const emailApi = new Brevo.TransactionalEmailsApi();
 
 export const sendOtpEmail = async (to, otp) => {
   serverLogger.info("Sending OTP via Brevo to:", to);
@@ -62,37 +65,32 @@ export const sendOtpEmail = async (to, otp) => {
     const sendSmtpEmail = {
       sender: {
         name: "E-Cell",
-        email: env.EMAIL_FROM, // must be verified in Brevo
+        email: env.EMAIL_FROM,
       },
-      to: [
-        {
-          email: to,
-        },
-      ],
+      to: [{ email: to }],
       subject: "Your OTP for verification for MES 2026",
       htmlContent: `
         <div style="font-family: sans-serif; background: #050505; color: white; padding: 40px; border-radius: 12px; border: 1px solid #333;">
           <h2 style="color: #783ca0;">Verification Code</h2>
-          <p style="color: #ccc;">
-            Use the code below to complete your registration for the
-            <strong>Manipal Entrepreneurship Summit</strong>.
-          </p>
-          <div style="font-size: 36px; font-weight: 800; letter-spacing: 6px; margin: 24px 0;">
+          <p style="color: #ccc;">Use the code below to complete your registration.</p>
+          <div style="font-size: 36px; font-weight: 800; letter-spacing: 6px;">
             ${otp}
           </div>
           <p style="font-size: 12px; color: #555;">
-            This code expires in 1 minute. If you didn’t request this, ignore this email.
+            This code expires in 1 minute.
           </p>
         </div>
       `,
     };
 
-    const response = await apiInstance.sendTransacEmail(sendSmtpEmail);
-
+    const response = await emailApi.sendTransacEmail(sendSmtpEmail);
     serverLogger.info("✅ Brevo success:", response.messageId);
     return response;
   } catch (err) {
-    serverLogger.error("❌ Brevo error:", err?.response?.body || err);
+    serverLogger.error(
+      "❌ Brevo error:",
+      err?.response?.body || err
+    );
     throw err;
   }
 };
