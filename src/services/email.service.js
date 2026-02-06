@@ -49,27 +49,23 @@ export const sendOtpEmail = async (to, otp) => {
 
 import Brevo from "@getbrevo/brevo";
 
-const emailApi = new Brevo.TransactionalEmailsApi();
+import nodemailer from "nodemailer";
 
-// attach api key like this
-emailApi.apiClient.authentications["api-key"].apiKey =
-  process.env.BREVO_API_KEY;
+const transporter = nodemailer.createTransport({
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: "apikey",
+    pass: process.env.BREVO_API_KEY,
+  },
+});
 
 export const sendOtpEmail = async (to, otp) => {
-  try {
-    const email = {
-      sender: {
-        name: "E-Cell",
-        email: process.env.EMAIL_FROM, // must be verified sender
-      },
-      to: [{ email: to }],
-      subject: "Your OTP for verification for MES 2026",
-      htmlContent: `<h2>Your OTP</h2><p>${otp}</p>`,
-    };
-
-    return await emailApi.sendTransacEmail(email);
-  } catch (err) {
-    console.error(err?.response?.body || err);
-    throw err;
-  }
+  return transporter.sendMail({
+    from: `"E-Cell" <${env.EMAIL_FROM}>`,
+    to,
+    subject: "Your OTP for verification for MES 2026",
+    html: `<h2>Your OTP</h2><p>${otp}</p>`,
+  });
 };
