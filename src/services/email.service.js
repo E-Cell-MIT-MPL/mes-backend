@@ -47,20 +47,16 @@ export const sendOtpEmail = async (to, otp) => {
 
 
 
-import Brevo from "@getbrevo/brevo";
+import * as Brevo from "@getbrevo/brevo";
 
-// Create global API client
 const client = Brevo.ApiClient.instance;
 
-// Set API key (THIS is the correct way)
-client.authentications["apiKey"].apiKey = env.BREVO_API_KEY;
+// ✅ correct auth key
+client.authentications["api-key"].apiKey = env.BREVO_API_KEY;
 
-// Create API instance
 const emailApi = new Brevo.TransactionalEmailsApi();
 
 export const sendOtpEmail = async (to, otp) => {
-  serverLogger.info("Sending OTP via Brevo to:", to);
-
   try {
     const sendSmtpEmail = {
       sender: {
@@ -69,28 +65,12 @@ export const sendOtpEmail = async (to, otp) => {
       },
       to: [{ email: to }],
       subject: "Your OTP for verification for MES 2026",
-      htmlContent: `
-        <div style="font-family: sans-serif; background: #050505; color: white; padding: 40px; border-radius: 12px; border: 1px solid #333;">
-          <h2 style="color: #783ca0;">Verification Code</h2>
-          <p style="color: #ccc;">Use the code below to complete your registration.</p>
-          <div style="font-size: 36px; font-weight: 800; letter-spacing: 6px;">
-            ${otp}
-          </div>
-          <p style="font-size: 12px; color: #555;">
-            This code expires in 1 minute.
-          </p>
-        </div>
-      `,
+      htmlContent: `<h2>Your OTP</h2><p>${otp}</p>`,
     };
 
-    const response = await emailApi.sendTransacEmail(sendSmtpEmail);
-    serverLogger.info("✅ Brevo success:", response.messageId);
-    return response;
+    return await emailApi.sendTransacEmail(sendSmtpEmail);
   } catch (err) {
-    serverLogger.error(
-      "❌ Brevo error:",
-      err?.response?.body || err
-    );
+    console.error(err?.response?.body || err);
     throw err;
   }
 };
