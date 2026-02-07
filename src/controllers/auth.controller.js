@@ -170,7 +170,16 @@ export const verifyOtp = async (req, res) => {
         },
       });
   } catch (error) {
-    serverLogger.error("OTP Verification Error", error);
+    serverLogger.error(
+      {
+        err: error,
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+      },
+      "VERIFY_OTP_FATAL",
+    );
+
     return res.status(500).json({ message: "OTP verification failed" });
   }
 };
