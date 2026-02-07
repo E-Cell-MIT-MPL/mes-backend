@@ -80,19 +80,22 @@ export const register = async (req, res) => {
     // Store registration data temporarily (you may want to use a separate TempUser model or Redis)
     const hashedPassword = await hashPassword(password);
 
+    const registrationData = {
+      userType,
+      name,
+      personalEmail,
+      phone,
+      password: hashedPassword,
+    };
+
+    if (userType === "MIT") {
+      registrationData.regNumber = regNumber;
+      registrationData.learnerEmail = learnerEmail;
+    }
+
     await Otp.findOneAndUpdate(
       { email: emailToSendOtp },
-      {
-        registrationData: {
-          userType,
-          name,
-          regNumber: userType === "MIT" ? regNumber : null,
-          learnerEmail: userType === "MIT" ? learnerEmail : null,
-          personalEmail,
-          phone,
-          password: hashedPassword,
-        },
-      },
+      { registrationData },
       { new: true },
     );
 
