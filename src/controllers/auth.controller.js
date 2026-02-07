@@ -53,10 +53,6 @@ export const register = async (req, res) => {
     }
     // ... Proceed with creating the new user and sending OTP ...
 
-    if (existingUser) {
-      return res.status(409).json({ message: "User already exists" });
-    }
-
     /* -------- GENERATE AND SEND OTP FIRST -------- */
     const otp = generateOtp();
     const emailToSendOtp = personalEmail;
