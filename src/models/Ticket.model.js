@@ -8,6 +8,11 @@ const ticketSchema = new mongoose.Schema(
       required: true,
     },
 
+    referrerTag: {
+      type: String,
+      default: null,
+    },
+
     eventName: {
       type: String,
       required: true,

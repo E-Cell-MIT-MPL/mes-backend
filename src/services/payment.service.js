@@ -1,6 +1,7 @@
 import axios from "axios";
 import { env } from "../utils/envConfig.js";
 import Ticket from "../models/Ticket.model.js";
+import User from "../models/User.model.js";
 import { encryptAtom, decryptAtom } from "../utils/atomAuth.js";
 
 const getFormattedDate = () => {
@@ -19,9 +20,17 @@ export const initiatePayment = async ({
   try {
     const txnId = `MES${Date.now()}`;
 
+    const user = await User.findById(userId).select(
+      "referrerTag personalEmail phone",
+    );
+    const referrerTag = user?.referrerTag || null;
+    const resolvedEmail = userEmail || user?.personalEmail || "test@example.com";
+    const resolvedMobile = userMobile || user?.phone || "9999999999";
+
     // 1. Create Ticket
     await Ticket.create({
       userId,
+      referrerTag,
       eventName,
       qrData: "PENDING",
       txnId,
@@ -51,8 +60,8 @@ export const initiatePayment = async ({
           txnCurrency: "INR",
         },
         custDetails: {
-          custEmail: userEmail || "test@example.com",
-          custMobile: userMobile || "9999999999",
+          custEmail: resolvedEmail,
+          custMobile: resolvedMobile,
         },
         extras: {
           udf1: eventName,

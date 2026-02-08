@@ -37,6 +37,11 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true },
 
     isVerified: { type: Boolean, default: false },
+
+    referrerTag: {
+      type: String,
+      default: null,
+    },
   },
   { timestamps: true },
 );

@@ -13,6 +13,7 @@ const otpSchema = new mongoose.Schema({
     personalEmail: String,
     phone: String,
     password: { type: String },
+    referralCode: String,
   },
 });
 

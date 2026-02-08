@@ -4,6 +4,7 @@ import { sendOtpEmail } from "../services/email.service.js";
 import { generateOtp } from "../utils/otp.js";
 import { hashPassword, comparePassword } from "../utils/password.js";
 import { signToken } from "../config/jwt.js";
+import { env } from "../utils/envConfig.js";
 import { serverLogger } from "../server.js";
 
 /* =========================
@@ -19,6 +20,7 @@ export const register = async (req, res) => {
       personalEmail,
       phone,
       password,
+      referralCode,
     } = req.body;
 
     /* -------- BASIC VALIDATION -------- */
@@ -89,6 +91,10 @@ export const register = async (req, res) => {
       registrationData.learnerEmail = learnerEmail;
     }
 
+    if (typeof referralCode === "string" && referralCode.trim()) {
+      registrationData.referralCode = referralCode.trim();
+    }
+
     await Otp.findOneAndUpdate(
       { email: emailToSendOtp },
       { registrationData },
@@ -131,10 +137,26 @@ export const verifyOtp = async (req, res) => {
 
     /* -------- CREATE USER AFTER OTP VERIFICATION -------- */
     if (otpRecord.registrationData) {
-      user = await User.create({
-        ...otpRecord.registrationData,
+      const { referralCode, ...registrationData } =
+        otpRecord.registrationData;
+      const normalizedReferral = typeof referralCode === "string"
+        ? referralCode.trim()
+        : "";
+      const shouldTagReferral =
+        normalizedReferral &&
+        env.REFERRAL_CODE &&
+        normalizedReferral.toLowerCase() === env.REFERRAL_CODE.toLowerCase();
+
+      const userData = {
+        ...registrationData,
         isVerified: true,
-      });
+      };
+
+      if (shouldTagReferral) {
+        userData.referrerTag = env.REFERRAL_CODE;
+      }
+
+      user = await User.create(userData);
     } else {
       // For existing users resending OTP
       user = await User.findOneAndUpdate(

@@ -20,6 +20,8 @@ const envSchema = z.object({
   EMAIL_FROM: z.string().min(1),
   RESEND_API_KEY: z.string().min(1),
 
+  REFERRAL_CODE: z.string().default(""),
+
   // 👇 PAYMENT GATEWAY (FIXED: Defined as strings, not values)
   ATOM_MERCH_ID: z.string().min(1),
   ATOM_MERCH_PASS: z.string().min(1),
