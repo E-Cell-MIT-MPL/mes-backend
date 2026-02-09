@@ -25,7 +25,6 @@ export const scanTicket = async (req, res) => {
     }
 
     // Extract ticket info from decrypted payload
-    // Payload structure: { u: userId, t: txnId, e: eventCode, v: timestamp }
     const { t: txnId } = decryptedData;
 
     if (!txnId) {
@@ -45,19 +44,42 @@ export const scanTicket = async (req, res) => {
       });
     }
 
-    // Block re-entry
-    if (ticket.isUsed) {
+    // --- NEW LOGIC: DAILY CHECK-IN ---
+
+    // 1. Get current date string in IST (e.g., "12/2/2026")
+    // This ensures that even if scanned at 1 AM, it counts for the correct local day
+    const today = new Date().toLocaleDateString("en-IN", {
+      timeZone: "Asia/Kolkata",
+    });
+
+    // 2. Check if this ticket has ALREADY been scanned TODAY
+    // We look inside the new entryHistory array
+    const alreadyScannedToday = ticket.entryHistory && ticket.entryHistory.some(
+      (entry) => entry.dateString === today
+    );
+
+    if (alreadyScannedToday) {
       return res.status(409).json({
         success: false,
-        message: "Ticket already used",
-        usedAt: ticket.usedAt,
+        message: `Ticket already used today (${today})`,
+        usedAt: ticket.usedAt, // Returns the last scan time
       });
     }
 
-    // Mark attendance
+    // --- MARK ATTENDANCE ---
+
+    // 3. Update Legacy Fields (Keeps old admin dashboards working)
     ticket.isUsed = true;
     ticket.usedAt = new Date();
     ticket.usedBy = req.headers["x-device"] || "scanner";
+
+    // 4. Push to New History Array (Tracks specific day entry)
+    ticket.entryHistory.push({
+      timestamp: new Date(),
+      scannedBy: req.headers["x-device"] || "scanner",
+      dateString: today // Stores "12/2/2026" or "14/2/2026"
+    });
+
     await ticket.save();
 
     // Success response
@@ -71,7 +93,9 @@ export const scanTicket = async (req, res) => {
       },
       eventName: ticket.eventName,
       scannedAt: ticket.usedAt,
+      day: today, // Optional: helps frontend display "Day 1" etc.
     });
+
   } catch (error) {
     serverLogger.error("Scan Ticket Error:", error);
 

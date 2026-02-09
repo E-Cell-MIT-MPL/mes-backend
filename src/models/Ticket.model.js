@@ -72,6 +72,12 @@ const ticketSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    //just added on 7th feb
+    entryHistory: [{
+        timestamp: { type: Date, default: Date.now },
+        scannedBy: { type: String },
+        dateString: { type: String } // Stores "DD/MM/YYYY" for easy matching
+    }],
 
     usedAt: {
       type: Date,
