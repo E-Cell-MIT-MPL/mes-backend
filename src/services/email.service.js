@@ -47,7 +47,7 @@ export const sendOtpEmail = async (to, otp) => {
 
 
 
-import Brevo from "@getbrevo/brevo";
+// import Brevo from "@getbrevo/brevo";
 
 import nodemailer from "nodemailer";
 

@@ -70,7 +70,7 @@ app.use(httpLogger);
 app.use("/health-check", healthCheckRouter);
 app.use("/auth", authRoutes);
 app.use("/tickets", ticketRoutes);
-app.use("/scan", scanRoutes);
+app.use("/api/scan", scanRoutes); // 👈 Added /api
 app.use("/payment", paymentRoutes);
 app.use("/", tempCallbackRouter);
 
