@@ -2,11 +2,7 @@ import { Resend } from "resend";
 import { serverLogger } from "../server.js";
 import { env } from "../utils/envConfig.js";
 
-
-
-
-
-/*const resend = new Resend(env.RESEND_API_KEY);
+const resend = new Resend(env.RESEND_API_KEY);
 
 export const sendOtpEmail = async (to, otp) => {
   serverLogger.info("Sending OTP via Resend to:", to);
@@ -24,7 +20,7 @@ export const sendOtpEmail = async (to, otp) => {
           <div style="font-size: 36px; font-weight: 800; letter-spacing: 6px; margin: 30px 0; color: #fff;">
             ${otp}
           </div>
-          <p style="font-size: 12px; color: #555;">This code expires in 10 minutes. If you did not request this, please ignore this email.</p>
+          <p style="font-size: 12px; color: #555;">This code expires in 5 minutes. If you did not request this, please ignore this email.</p>
         </div>
       `,
     });
@@ -40,32 +36,25 @@ export const sendOtpEmail = async (to, otp) => {
     serverLogger.error("❌ Failed to send OTP:", err);
     throw err;
   }
-};  */
-
-
-
-
-
-
-// import Brevo from "@getbrevo/brevo";
-
-import nodemailer from "nodemailer";
-
-const transporter = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: "a1a3c7001@smtp-brevo.com",
-    pass: process.env.BREVO_API_KEY,
-  },
-});
-
-export const sendOtpEmail = async (to, otp) => {
-  return transporter.sendMail({
-    from: `"E-Cell" <${env.EMAIL_FROM}>`,
-    to,
-    subject: "Your OTP for verification for MES 2026",
-    html: `<h2>Your OTP</h2><p>${otp}</p>`,
-  });
 };
+
+// import nodemailer from "nodemailer";
+
+// const transporter = nodemailer.createTransport({
+//   host: "smtp-relay.brevo.com",
+//   port: 587,
+//   secure: false,
+//   auth: {
+//     user: "a1a3c7001@smtp-brevo.com",
+//     pass: process.env.BREVO_API_KEY,
+//   },
+// });
+
+// export const sendOtpEmail = async (to, otp) => {
+//   return transporter.sendMail({
+//     from: `"E-Cell" <${env.EMAIL_FROM}>`,
+//     to,
+//     subject: "Your OTP for verification for MES 2026",
+//     html: `<h2>Your OTP</h2><p>${otp}</p>`,
+//   });
+// };
