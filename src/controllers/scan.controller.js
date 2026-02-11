@@ -2,58 +2,49 @@ import Ticket from "../models/Ticket.model.js";
 import { decryptTicketData } from "../utils/qrSecurity.js";
 import { serverLogger } from "../server.js";
 
+// 👇 Helper function to dynamically check if user is MAHE based on email
+const getRole = (user) => {
+    if (user?.learnerEmail && user.learnerEmail.includes("@learner.manipal.edu")) {
+        return "MAHE STUDENT";
+    }
+    return "NON-MAHE";
+};
+
 export const scanTicket = async (req, res) => {
   try {
     // Expected body: { encryptedQR: "iv:encrypted_data" }
     const { encryptedQR } = req.body;
 
     if (!encryptedQR) {
-      return res.status(400).json({
-        success: false,
-        message: "QR data missing",
-      });
+      return res.status(400).json({ success: false, message: "QR data missing" });
     }
 
     // Decrypt QR data
     const decryptedData = decryptTicketData(encryptedQR);
 
-    if (!decryptedData) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid or tampered QR",
-      });
+    if (!decryptedData || !decryptedData.t) {
+      return res.status(400).json({ success: false, message: "Invalid or tampered QR" });
     }
 
     // Extract ticket info from decrypted payload
     const { t: txnId } = decryptedData;
 
     if (!txnId) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid QR payload",
-      });
+      return res.status(400).json({ success: false, message: "Invalid QR payload" });
     }
 
     // Fetch ticket by transaction ID
     const ticket = await Ticket.findOne({ txnId }).populate("userId");
 
     if (!ticket) {
-      return res.status(404).json({
-        success: false,
-        message: "Ticket not found",
-      });
+      return res.status(404).json({ success: false, message: "Ticket not found" });
     }
 
     // --- NEW LOGIC: DAILY CHECK-IN ---
-
-    // 1. Get current date string in IST (e.g., "12/2/2026")
-    // This ensures that even if scanned at 1 AM, it counts for the correct local day
-    const today = new Date().toLocaleDateString("en-IN", {
-      timeZone: "Asia/Kolkata",
-    });
+    const today = new Date().toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
 
     // 2. Check if this ticket has ALREADY been scanned TODAY
-    // We look inside the new entryHistory array
+    // (Commented out for unlimited testing as requested)
     // const alreadyScannedToday = ticket.entryHistory && ticket.entryHistory.some(
     //   (entry) => entry.dateString === today
     // );
@@ -62,22 +53,20 @@ export const scanTicket = async (req, res) => {
     //   return res.status(409).json({
     //     success: false,
     //     message: `Ticket already used today (${today})`,
-    //     usedAt: ticket.usedAt, // Returns the last scan time
+    //     usedAt: ticket.usedAt, 
     //   });
     // }
 
     // --- MARK ATTENDANCE ---
-
-    // 3. Update Legacy Fields (Keeps old admin dashboards working)
     ticket.isUsed = true;
     ticket.usedAt = new Date();
     ticket.usedBy = req.headers["x-device"] || "scanner";
 
-    // 4. Push to New History Array (Tracks specific day entry)
+    // Push to New History Array
     ticket.entryHistory.push({
       timestamp: new Date(),
       scannedBy: req.headers["x-device"] || "scanner",
-      dateString: today // Stores "12/2/2026" or "14/2/2026"
+      dateString: today 
     });
 
     await ticket.save();
@@ -88,55 +77,53 @@ export const scanTicket = async (req, res) => {
       message: "ENTRY ALLOWED",
       attendee: {
         name: ticket.userId.name,
-        email:
-          ticket.userId.learnerEmail || ticket.userId.personalEmail || null,
+        email: ticket.userId.learnerEmail || ticket.userId.personalEmail || null,
       },
       eventName: ticket.eventName,
       scannedAt: ticket.usedAt,
-      day: today, // Optional: helps frontend display "Day 1" etc.
+      day: today, 
+      ticketId: ticket.txnId,                       // 🟢 Ticket Transaction ID
+      regNumber: ticket.userId?.regNumber || "N/A", // 🟢 Actual Registration Number
+      role: getRole(ticket.userId)                  // 🟢 Role calculation
     });
 
   } catch (error) {
     serverLogger.error("Scan Ticket Error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Scan failed",
-    });
+    return res.status(500).json({ success: false, message: "Scan failed" });
   }
 };
 
-// ... existing imports and functions ...
-
-// 👇 ADD THIS NEW FUNCTION
+// --- GET SCAN HISTORY ---
 export const getScanHistory = async (req, res) => {
   try {
-    // 1. Find all tickets that have at least one entry
+    // 🟢 Added 'regNumber' to populate array
     const tickets = await Ticket.find({ 
         "entryHistory.0": { $exists: true } 
-    }).populate("userId", "name learnerEmail personalEmail");
+    }).populate("userId", "name learnerEmail personalEmail regNumber");
 
-    // 2. Flatten the history (User scanned 3 times = 3 rows in table)
     let historyLog = [];
 
     tickets.forEach(ticket => {
         ticket.entryHistory.forEach(entry => {
             historyLog.push({
                 id: ticket.txnId,
+                ticketId: ticket.txnId,
+                regNumber: ticket.userId?.regNumber || "N/A", // 🟢 Added
+                role: getRole(ticket.userId),                 // 🟢 Added
                 name: ticket.userId?.name || "Unknown",
                 email: ticket.userId?.learnerEmail || ticket.userId?.personalEmail || "N/A",
                 time: new Date(entry.timestamp).toLocaleString("en-IN", { 
                     timeZone: "Asia/Kolkata",
                     hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" 
                 }),
-                gate: entry.dateString || "Unknown Day", // "Day 1", "Day 2"
-                status: "Entry Allowed",
-                rawTime: new Date(entry.timestamp) // For sorting
+                gate: entry.dateString || "Unknown Day", 
+                status: "ENTRY ALLOWED",
+                rawTime: new Date(entry.timestamp) 
             });
         });
     });
 
-    // 3. Sort by Newest First
+    // Sort by Newest First
     historyLog.sort((a, b) => b.rawTime - a.rawTime);
 
     res.json({
@@ -150,17 +137,15 @@ export const getScanHistory = async (req, res) => {
   }
 };
 
-// ... (Your existing scanTicket function is here. LEAVE IT ALONE.) ...
-
-// 👇 ADD THIS NEW FUNCTION AT THE BOTTOM
+// --- GET DASHBOARD STATS ---
 export const getDashboardStats = async (req, res) => {
   try {
-    // 1. Total Tickets SOLD (Only Success)
+    // 1. Total Tickets SOLD
     const totalSold = await Ticket.countDocuments({ 
         paymentStatus: "SUCCESS" 
     });
     
-    // 2. Total Checked In (Has entry history AND was a success)
+    // 2. Total Checked In
     const checkedInCount = await Ticket.countDocuments({ 
         "entryHistory.0": { $exists: true },
         paymentStatus: "SUCCESS"
@@ -170,22 +155,25 @@ export const getDashboardStats = async (req, res) => {
     const pendingCount = totalSold - checkedInCount;
 
     // 4. Recent Entries (Get latest 5)
+    // 🟢 Added 'regNumber' and 'learnerEmail' here too
     const recentTickets = await Ticket.find({ 
         "entryHistory.0": { $exists: true },
         paymentStatus: "SUCCESS"
     })
       .sort({ "updatedAt": -1 }) 
       .limit(5)
-      .populate("userId", "name");
+      .populate("userId", "name regNumber learnerEmail"); 
 
     const recentEntries = recentTickets.map(t => {
        const lastEntry = t.entryHistory[t.entryHistory.length - 1];
        return {
           id: t.txnId,
+          regNumber: t.userId?.regNumber || "N/A", // 🟢 Used for Recent Scans block
+          role: getRole(t.userId),                 
           name: t.userId?.name || "Unknown",
-          time: new Date(lastEntry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          time: new Date(lastEntry.timestamp).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: '2-digit', minute: '2-digit' }),
           gate: lastEntry.dateString,
-          status: "Entry Allowed"
+          status: "ENTRY ALLOWED"
        };
     });
 
