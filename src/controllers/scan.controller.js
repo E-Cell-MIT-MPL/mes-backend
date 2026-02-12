@@ -45,17 +45,17 @@ export const scanTicket = async (req, res) => {
 
     // 2. Check if this ticket has ALREADY been scanned TODAY
     // (Commented out for unlimited testing as requested)
-    // const alreadyScannedToday = ticket.entryHistory && ticket.entryHistory.some(
-    //   (entry) => entry.dateString === today
-    // );
+    const alreadyScannedToday = ticket.entryHistory && ticket.entryHistory.some(
+      (entry) => entry.dateString === today
+    );
 
-    // if (alreadyScannedToday) {
-    //   return res.status(409).json({
-    //     success: false,
-    //     message: `Ticket already used today (${today})`,
-    //     usedAt: ticket.usedAt, 
-    //   });
-    // }
+    if (alreadyScannedToday) {
+      return res.status(409).json({
+        success: false,
+        message: `Ticket already used today (${today})`,
+        usedAt: ticket.usedAt, 
+      });
+    }
 
     // --- MARK ATTENDANCE ---
     ticket.isUsed = true;
