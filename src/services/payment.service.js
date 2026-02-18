@@ -54,7 +54,7 @@ export const initiatePayment = async ({
           merchTxnDate: getFormattedDate(),
         },
         payDetails: {
-          amount: "250",
+          amount: "1",
           product: env.ATOM_PROD_ID,
           custAccNo: "1234567890",
           txnCurrency: "INR",
